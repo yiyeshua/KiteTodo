@@ -204,8 +204,8 @@
                                     <ProgressBar Grid.Column="0" Value="{Binding Progress}"
                                                  Minimum="0" Maximum="100" Height="4"
                                                  Foreground="#0078D4" Background="#20000000"/>
-                                    <TextBlock Grid.Column="1" FontSize="10" Opacity="0.6"
-                                               Margin="6,0,0,0" VerticalAlignment="Center"
+                                    <TextBlock Grid.Column="1" FontSize="12" Foreground="#333333"
+                                               Margin="6,0,0,0" VerticalAlignment="Center" FontWeight="SemiBold"
                                                Text="{Binding Progress, Converter={StaticResource ProgressTextConverter}}"/>
                                 </Grid>
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">

@@ -109,8 +109,8 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <TextBlock Text="{Binding Summary}" FontSize="10"
-                                           Foreground="{DynamicResource CustomFgTertiary}"
+                                <TextBlock Text="{Binding Summary}" FontSize="10" FontWeight="SemiBold"
+                                           Foreground="#0078D4"
                                            HorizontalAlignment="Right" VerticalAlignment="Center">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
@@ -130,7 +130,7 @@
                             <TextBlock Grid.Row="1" Text="{Binding TodoTitles}" FontSize="9"
                                        TextTrimming="CharacterEllipsis" TextWrapping="Wrap"
                                        MaxHeight="36" Margin="0,3,0,0"
-                                       Foreground="{DynamicResource CustomFgTertiary}">
+                                       Foreground="#0078D4">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Style.Triggers>
