@@ -43,14 +43,14 @@
 
 | 功能 | 说明 |
 |------|------|
-| **今日待办** | 首页，添加/编辑/删除/完成待办，支持优先级、截止日期、提醒时间 |
-| **周视图** | 以周一~周日 7 列展示本周待办，支持快速添加/删除，可导出周报 |
-| **月度总览** | 日历网格展示整月待办概览，点击某天查看详情 |
-| **专注计时** | 番茄钟功能（25分钟专注 + 5分钟休息），支持暂停/继续/取消 |
-| **数据导出** | 将待办数据导出为 JSON/CSV 文件 |
-| **设置** | 主题切换（浅色/深色）、番茄钟时长配置、提醒开关 |
-| **系统托盘** | 关闭窗口后最小化到托盘，右键可显示主窗口或退出 |
-| **到期提醒** | 后台定时检查待办截止时间，到期时弹出 Windows 通知 |
+| **今日待办** | 首页，添加/编辑/删除/完成待办，支持优先级、截止日期、提醒时间；周栏快速切换日期；导出周报到剪贴板 |
+| **月度总览** | 日历网格展示整月待办概览，实时显示每日完成率，点击某天查看详情 |
+| **专注计时** | 番茄钟功能（25分钟专注 + 5分钟休息），支持暂停/继续/取消，自动记录完成情况 |
+| **数据导出** | 将待办数据导出为 Markdown 或纯文本格式，支持自定义日期范围 |
+| **记事本** | 笔记增删改查，支持将笔记快速转化为待办事项 |
+| **设置** | 主题切换（浅色/深色）、番茄钟时长配置、开机自启动 |
+| **系统托盘** | 关闭窗口后最小化到托盘，左键显示主窗口，右键菜单可显示或退出 |
+| **到期提醒** | 后台每 30 秒检查一次待办提醒时间，到期时弹出 Windows Toast 通知 |
 
 ---
 
@@ -132,29 +132,31 @@ KiteTodo/
 ├── Models/                  # 数据模型（纯数据类）
 │   ├── TodoItem.cs          #   待办事项模型
 │   ├── PomodoroRecord.cs    #   番茄钟记录模型
-│   └── AppSettings.cs       #   应用设置模型
+│   ├── AppSettings.cs       #   应用设置模型
+│   └── Note.cs              #   笔记模型
 │
 ├── Services/                # 服务层（数据操作、业务逻辑）
 │   ├── DatabaseService.cs   #   数据库连接管理（LiteDB 单例）
 │   ├── TodoService.cs       #   待办的增删改查
-│   ├── ExportService.cs     #   数据导出（JSON/CSV）
+│   ├── NoteService.cs       #   笔记的增删改查和转待办
+│   ├── ExportService.cs     #   数据导出（Markdown/纯文本）
 │   └── ReminderService.cs   #   到期提醒（后台定时检查）
 │
 ├── ViewModels/              # 视图模型（连接界面和数据）
 │   ├── HomeViewModel.cs     #   首页 ViewModel
-│   ├── WeeklyViewModel.cs   #   周视图 ViewModel
 │   ├── MonthlyViewModel.cs  #   月视图 ViewModel
 │   ├── PomodoroViewModel.cs #   番茄钟 ViewModel
 │   ├── ExportViewModel.cs   #   导出页 ViewModel
-│   └── SettingsViewModel.cs #   设置页 ViewModel
+│   ├── SettingsViewModel.cs #   设置页 ViewModel
+│   └── NotebookViewModel.cs #   记事本 ViewModel
 │
 ├── Views/Pages/             # 页面（XAML 界面 + 代码后台）
-│   ├── HomePage.xaml/.cs    #   今日待办页面
-│   ├── WeeklyPage.xaml/.cs  #   周视图页面
+│   ├── HomePage.xaml/.cs    #   今日待办页面（含周栏导航、周报导出）
 │   ├── MonthlyPage.xaml/.cs #   月度总览页面
 │   ├── PomodoroPage.xaml/.cs#   番茄钟页面
 │   ├── ExportPage.xaml/.cs  #   数据导出页面
-│   └── SettingsPage.xaml/.cs#   设置页面
+│   ├── SettingsPage.xaml/.cs#   设置页面
+│   └── NotebookPage.xaml/.cs#   记事本页面
 │
 └── Converters/              # 值转换器（XAML 绑定时的数据格式转换）
     └── BoolConverters.cs    #   多个 bool 相关的转换器
@@ -336,9 +338,10 @@ private void Save()
 
 | 文件 | 说明 | 关键字段 |
 |------|------|----------|
-| `TodoItem.cs` | 待办事项 | Id, Title, Description, IsCompleted, DueDate, Priority, ReminderTime, CreatedAt |
-| `PomodoroRecord.cs` | 番茄钟记录 | Id, StartTime, EndTime, DurationMinutes, IsCompleted |
-| `AppSettings.cs` | 应用设置 | Id, ThemeMode, FocusDuration, ShortBreakDuration, EnableReminder |
+| `TodoItem.cs` | 待办事项 | Id, Title, Description, ScheduledDate, Priority, Progress, IsCompleted, ReminderTime, PomodoroCount, CreatedAt |
+| `PomodoroRecord.cs` | 番茄钟记录 | Id, StartTime, DurationMinutes, IsCompleted |
+| `AppSettings.cs` | 应用设置 | Id, ThemeMode, PomodoroDuration, ShortBreakDuration, LongBreakDuration, LongBreakInterval, LaunchAtStartup |
+| `Note.cs` | 笔记 | Id, Title, Content, CreatedAt, UpdatedAt |
 
 ### Services -- 服务层
 
@@ -347,9 +350,10 @@ private void Save()
 | 文件 | 说明 |
 |------|------|
 | `DatabaseService.cs` | LiteDB 数据库连接管理。使用**单例模式**，全局只有一个数据库连接实例。数据库文件路径：`%LOCALAPPDATA%\KiteTodo\kitetodo.db` |
-| `TodoService.cs` | 待办事项的 CRUD 操作（增删改查）。所有读写最终通过 DatabaseService 操作 LiteDB |
-| `ExportService.cs` | 数据导出功能，支持 JSON 和 CSV 两种格式 |
-| `ReminderService.cs` | 到期提醒服务。启动一个后台定时器（默认每分钟检查一次），发现到期待办时弹出 Windows Toast 通知 |
+| `TodoService.cs` | 待办事项的 CRUD 操作（增删改查）、按日期范围查询、月统计。所有读写最终需要 DatabaseService 操作 LiteDB |
+| `NoteService.cs` | 笔记的 CRUD 操作，支持“转待办”功能 |
+| `ExportService.cs` | 数据导出功能，支持 Markdown 和纯文本两种格式 |
+| `ReminderService.cs` | 到期提醒服务。启动一个后台定时器（每 30 秒检查一次），发现到期待办时弹出 Windows Toast 通知 |
 
 ### ViewModels -- 视图模型
 
@@ -357,12 +361,12 @@ private void Save()
 
 | 文件 | 对应页面 | 核心功能 |
 |------|----------|----------|
-| `HomeViewModel.cs` | 今日待办 | 管理待办列表、添加/编辑/删除/完成、筛选排序 |
-| `WeeklyViewModel.cs` | 周视图 | 按周组织待办、前/后翻周、快速添加、生成周报 |
-| `MonthlyViewModel.cs` | 月度总览 | 生成日历网格（7x6）、按天聚合待办、选中日期查看详情 |
-| `PomodoroViewModel.cs` | 番茄钟 | 计时状态机（空闲→专注→休息）、暂停/继续/取消、记录统计 |
+| `HomeViewModel.cs` | 今日待办 | 管理待办列表、添加/编辑/删除/完成、按日切换、周栋导航、生成周报 |
+| `MonthlyViewModel.cs` | 月度总览 | 生成日历网格(7x6)、按天聚合待办、选中日期查看详情 |
+| `PomodoroViewModel.cs` | 专注计时 | 计时状态机（空闲→专注→休息）、暂停/继续/取消、记录统计 |
 | `ExportViewModel.cs` | 数据导出 | 生成预览、保存到文件 |
-| `SettingsViewModel.cs` | 设置 | 加载/保存设置、主题切换 |
+| `SettingsViewModel.cs` | 设置 | 加载/保存设置、主题即时切换、注册表管理 |
+| `NotebookViewModel.cs` | 记事本 | 管理笔记列表、保存/剧除/转待办 |
 
 ### Views -- 界面层
 
@@ -370,12 +374,12 @@ private void Save()
 
 | 页面 | 功能要点 |
 |------|----------|
-| `HomePage` | 最复杂的页面。包含待办列表、新增/编辑表单、优先级选择、日期选择器、筛选标签 |
-| `WeeklyPage` | 7 列布局，每列代表一天。支持拖拽式快速添加和一键导出周报 |
-| `MonthlyPage` | 日历网格 + 弹出式详情浮层。使用事件冒泡控制浮层开关 |
-| `PomodoroPage` | 圆形计时器显示 + 4 个动态显示/隐藏的操作按钮 |
-| `ExportPage` | 格式选择 + 预览区 + 导出按钮 |
+| `HomePage` | 最轭杂的页面。包含待办列表、新增/编辑表单、优先级选择、周栋导航、右键移动、周报导出 |
+| `MonthlyPage` | 日历网格 + 弹出式详情浮层。网格显示每天的完成率进度条。使用事件冤泡控制浮层开关 |
+| `PomodoroPage` | 圆形计时器显示 + 4 个动态显示/隐藏的操作按断 |
+| `ExportPage` | 格式选择 + 预览区 + 导出③按童 |
 | `SettingsPage` | 各设置项通过双向绑定到 ViewModel 属性 |
+| `NotebookPage` | 左侧笔记列表 + 右侧编辑区。支持拖拖分隔符改变宽度 |
 
 ### Converters -- 值转换器
 
