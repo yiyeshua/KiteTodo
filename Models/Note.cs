@@ -1,0 +1,28 @@
+// ============================================================================
+// Note.cs — 记事本条目数据模型
+// 对应数据库中的 "notes" 集合
+// ============================================================================
+
+namespace KiteTodo.Models;
+
+/// <summary>
+/// 记事本条目，存储在 LiteDB 的 notes 集合中。
+/// 每一条记录代表一个笔记，包含标题和纯文本内容。
+/// </summary>
+public class Note
+{
+    /// <summary>LiteDB 自增主键</summary>
+    public int Id { get; set; }
+
+    /// <summary>笔记标题</summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>笔记纯文本内容</summary>
+    public string Content { get; set; } = string.Empty;
+
+    /// <summary>创建时间</summary>
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+    /// <summary>最后修改时间</summary>
+    public DateTime UpdatedAt { get; set; } = DateTime.Now;
+}

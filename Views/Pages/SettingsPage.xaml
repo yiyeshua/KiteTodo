@@ -1,0 +1,82 @@
+<Page x:Class="KiteTodo.Views.Pages.SettingsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      Title="设置">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24,16,24,24">
+        <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+            <TextBlock Text="设置" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,20"/>
+
+            <!-- Pomodoro Settings -->
+            <TextBlock Text="番茄钟" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+            <ui:Card Padding="16" Margin="0,0,0,16">
+                <StackPanel>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="130"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="专注时长（分钟）" VerticalAlignment="Center"/>
+                        <ui:NumberBox Grid.Column="1" Value="{Binding PomodoroDuration, Mode=TwoWay}" Minimum="1" Maximum="120" SpinButtonPlacementMode="Compact"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="130"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="短休息（分钟）" VerticalAlignment="Center"/>
+                        <ui:NumberBox Grid.Column="1" Value="{Binding ShortBreakDuration, Mode=TwoWay}" Minimum="1" Maximum="30" SpinButtonPlacementMode="Compact"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="130"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="长休息（分钟）" VerticalAlignment="Center"/>
+                        <ui:NumberBox Grid.Column="1" Value="{Binding LongBreakDuration, Mode=TwoWay}" Minimum="1" Maximum="60" SpinButtonPlacementMode="Compact"/>
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="130"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="长休息间隔（轮次）" VerticalAlignment="Center"/>
+                        <ui:NumberBox Grid.Column="1" Value="{Binding LongBreakInterval, Mode=TwoWay}" Minimum="1" Maximum="10" SpinButtonPlacementMode="Compact"/>
+                    </Grid>
+                </StackPanel>
+            </ui:Card>
+
+            <!-- Appearance -->
+            <TextBlock Text="外观" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+            <ui:Card Padding="16" Margin="0,0,0,16">
+                <StackPanel>
+                    <CheckBox Content="深色模式" IsChecked="{Binding IsDarkMode}" Margin="0,0,0,0"/>
+                </StackPanel>
+            </ui:Card>
+
+            <!-- General Settings -->
+            <TextBlock Text="通用" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+            <ui:Card Padding="16" Margin="0,0,0,16">
+                <StackPanel>
+                    <CheckBox Content="开机自启动" IsChecked="{Binding LaunchAtStartup}"/>
+                </StackPanel>
+            </ui:Card>
+
+            <!-- Save -->
+            <ui:Button Content="保存设置" Appearance="Primary" Click="OnSave"
+                       Icon="{ui:SymbolIcon Save24}" HorizontalAlignment="Left"/>
+            <TextBlock Text="{Binding StatusMessage}" Margin="0,8,0,0" Opacity="0.7"
+                       Foreground="Green"/>
+
+            <!-- About -->
+            <TextBlock Text="关于" FontSize="16" FontWeight="SemiBold" Margin="0,24,0,12"/>
+            <ui:Card Padding="16" Margin="0,0,0,24">
+                <StackPanel>
+                    <TextBlock Text="KiteTodo v1.0.0 - 风筝待办" FontWeight="SemiBold"/>
+                    <TextBlock Text="一款轻量级桌面待办事项管理工具" Opacity="0.7" Margin="0,4,0,0"/>
+                </StackPanel>
+            </ui:Card>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

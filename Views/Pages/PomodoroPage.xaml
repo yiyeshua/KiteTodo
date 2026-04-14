@@ -1,0 +1,43 @@
+<Page x:Class="KiteTodo.Views.Pages.PomodoroPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      Title="专注计时">
+
+    <Grid Margin="24,16">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="400">
+            <!-- Timer Display -->
+            <Border Width="260" Height="260" CornerRadius="130" Margin="0,0,0,24"
+                    BorderThickness="6" BorderBrush="#DDDDDD">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding TimerDisplay}" FontSize="52" FontWeight="Light"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding StateLabel}" FontSize="14" Opacity="0.6"
+                               HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Controls -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,24">
+                <ui:Button Content="开始" Appearance="Primary" Margin="4"
+                           Click="OnStart" MinWidth="90" x:Name="BtnStart"/>
+                <ui:Button Content="暂停" Appearance="Secondary" Margin="4"
+                           Click="OnPause" MinWidth="90" x:Name="BtnPause" Visibility="Collapsed"/>
+                <ui:Button Content="继续" Appearance="Primary" Margin="4"
+                           Click="OnResume" MinWidth="90" x:Name="BtnResume" Visibility="Collapsed"/>
+                <ui:Button Content="取消" Appearance="Danger" Margin="4"
+                           Click="OnCancel" MinWidth="90" x:Name="BtnCancel" Visibility="Collapsed"/>
+            </StackPanel>
+
+            <!-- Today Stats -->
+            <ui:Card Padding="16">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <ui:SymbolIcon Symbol="Timer24" Margin="0,0,8,0"/>
+                    <TextBlock Text="今日已完成 " FontSize="14"/>
+                    <TextBlock Text="{Binding TodayPomodoros}" FontSize="14" FontWeight="Bold"/>
+                    <TextBlock Text=" 个番茄钟" FontSize="14"/>
+                </StackPanel>
+            </ui:Card>
+        </StackPanel>
+    </Grid>
+</Page>
