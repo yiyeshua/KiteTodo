@@ -8,9 +8,11 @@
 // 3. 时间参数可在设置页面自定义
 // ============================================================================
 
+using System.Collections.ObjectModel;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KiteTodo.Helpers;
 using KiteTodo.Models;
 using KiteTodo.Services;
 
@@ -71,6 +73,18 @@ public partial class PomodoroViewModel : ObservableObject
     /// <summary>倒计时显示文本（如 "25:00"）</summary>
     [ObservableProperty]
     private string _timerDisplay = "25:00";
+
+    /// <summary>当前绑定的待办 ID（null 表示未绑定）</summary>
+    [ObservableProperty]
+    private int? _boundTodoId;
+
+    /// <summary>当前绑定的待办标题（用于界面显示）</summary>
+    [ObservableProperty]
+    private string _boundTodoTitle = "";
+
+    /// <summary>今日未完成的待办列表（供下拉选择）</summary>
+    [ObservableProperty]
+    private ObservableCollection<TodoItem> _availableTodos = new();
 
     public PomodoroViewModel()
     {
@@ -180,9 +194,21 @@ public partial class PomodoroViewModel : ObservableObject
             {
                 StartTime = _timerStartTime,
                 DurationMinutes = settings.PomodoroDuration,
-                IsCompleted = true
+                IsCompleted = true,
+                TodoId = BoundTodoId
             });
             LoadTodayStats();
+
+            // 如果绑定了待办，增加其番茄钟计数
+            if (BoundTodoId.HasValue)
+            {
+                var todo = _todoService.GetById(BoundTodoId.Value);
+                if (todo != null)
+                {
+                    todo.PomodoroCount++;
+                    _todoService.Update(todo);
+                }
+            }
 
             // 判断进入长休息还是短休息
             if (_completedPomodoros % settings.LongBreakInterval == 0)
@@ -215,5 +241,38 @@ public partial class PomodoroViewModel : ObservableObject
         var ts = RemainingTime;
         if (ts < TimeSpan.Zero) ts = TimeSpan.Zero;
         TimerDisplay = $"{(int)ts.TotalMinutes:D2}:{ts.Seconds:D2}";
+    }
+
+    /// <summary>加载今日未完成的待办列表（供下拉选择绑定任务）</summary>
+    public void LoadAvailableTodos()
+    {
+        var todos = _todoService.GetTodosByDate(DateTime.Today)
+            .Where(t => !t.IsCompleted)
+            .ToList();
+        AvailableTodos = new ObservableCollection<TodoItem>(todos);
+    }
+
+    /// <summary>绑定指定待办到当前番茄钟</summary>
+    public void BindTodo(int todoId, string title)
+    {
+        BoundTodoId = todoId;
+        BoundTodoTitle = title;
+    }
+
+    /// <summary>解除待办绑定</summary>
+    public void UnbindTodo()
+    {
+        BoundTodoId = null;
+        BoundTodoTitle = "";
+    }
+
+    /// <summary>检查是否有来自首页的待绑定请求（FocusRequest 静态类）</summary>
+    public void CheckPendingRequest()
+    {
+        if (FocusRequest.PendingTodoId.HasValue)
+        {
+            BindTodo(FocusRequest.PendingTodoId.Value, FocusRequest.PendingTodoTitle ?? "");
+            FocusRequest.Clear();
+        }
     }
 }

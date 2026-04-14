@@ -20,6 +20,7 @@
 // ============================================================================
 
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using KiteTodo.ViewModels;
@@ -44,6 +45,24 @@ public partial class PomodoroPage : Page
 
         // 初始化时设置一次按钮可见性（此时应该是 Idle 状态，只显示"开始"按钮）
         UpdateButtonVisibility();
+
+        // 页面每次展示时刷新待办列表和检查绑定请求
+        Loaded += OnPageLoaded;
+    }
+
+    /// <summary>页面加载时刷新待办列表并检查待绑定请求</summary>
+    private void OnPageLoaded(object sender, RoutedEventArgs e)
+    {
+        _vm.LoadAvailableTodos();
+        _vm.CheckPendingRequest();
+        UpdateBindingUI();
+
+        // 同步 ComboBox 选中项
+        if (_vm.BoundTodoId.HasValue)
+        {
+            var match = _vm.AvailableTodos.FirstOrDefault(t => t.Id == _vm.BoundTodoId.Value);
+            TodoSelector.SelectedItem = match;
+        }
     }
 
     /// <summary>
@@ -106,5 +125,33 @@ public partial class PomodoroPage : Page
     {
         _vm.CancelCommand.Execute(null);
         UpdateButtonVisibility();
+    }
+
+    /// <summary>下拉选择待办时绑定到番茄钟</summary>
+    private void OnTodoSelected(object sender, SelectionChangedEventArgs e)
+    {
+        if (TodoSelector.SelectedItem is KiteTodo.Models.TodoItem item)
+        {
+            _vm.BindTodo(item.Id, item.Title);
+            UpdateBindingUI();
+        }
+    }
+
+    /// <summary>解除任务绑定</summary>
+    private void OnUnbindTodo(object sender, RoutedEventArgs e)
+    {
+        _vm.UnbindTodo();
+        TodoSelector.SelectedItem = null;
+        UpdateBindingUI();
+    }
+
+    /// <summary>更新绑定状态的 UI 显示</summary>
+    private void UpdateBindingUI()
+    {
+        var hasBound = _vm.BoundTodoId.HasValue;
+        BtnUnbind.Visibility = hasBound ? Visibility.Visible : Visibility.Collapsed;
+        BoundTaskLabel.Visibility = hasBound ? Visibility.Visible : Visibility.Collapsed;
+        BoundTaskLabel.Text = hasBound ? $"当前绑定: {_vm.BoundTodoTitle}" : "";
+        TimerBoundTitle.Visibility = hasBound ? Visibility.Visible : Visibility.Collapsed;
     }
 }

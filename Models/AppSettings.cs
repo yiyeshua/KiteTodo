@@ -31,6 +31,9 @@ public class AppSettings
     /// <summary>是否开机自启动</summary>
     public bool LaunchAtStartup { get; set; }
 
+    /// <summary>用户自定义的标签列表（预定义标签之外的）</summary>
+    public List<string> CustomTags { get; set; } = new();
+
     // 以下字段为历史遗留（浮窗功能已移除），保留以避免数据库迁移问题
     public bool ShowMiniWindow { get; set; }
     public double MiniWindowX { get; set; } = 100;

@@ -52,4 +52,10 @@ public partial class MainWindow : FluentWindow
         Hide();
         base.OnClosing(e);
     }
+
+    /// <summary>公开的导航方法，供其他页面的 code-behind 调用</summary>
+    public void NavigateTo(Type pageType)
+    {
+        NavView.Navigate(pageType);
+    }
 }

@@ -41,4 +41,19 @@ public partial class ExportPage : Page
     /// 因为事件签名必须返回 void。
     /// </summary>
     private async void OnExport(object sender, RoutedEventArgs e) => await _vm.ExportToFileCommand.ExecuteAsync(null);
+
+    /// <summary>点击"备份数据"按钮</summary>
+    private async void OnBackup(object sender, RoutedEventArgs e) => await _vm.BackupToFileCommand.ExecuteAsync(null);
+
+    /// <summary>点击"恢复数据"按钮，先弹确认框</summary>
+    private async void OnRestore(object sender, RoutedEventArgs e)
+    {
+        var result = MessageBox.Show(
+            "恢复数据将覆盖当前所有数据（待办、笔记、番茄钟记录、设置），确认继续？",
+            "确认恢复",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+        if (result == MessageBoxResult.Yes)
+            await _vm.RestoreFromFileCommand.ExecuteAsync(null);
+    }
 }

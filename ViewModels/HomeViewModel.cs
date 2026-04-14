@@ -51,6 +51,10 @@ public class WeekDay
 public partial class HomeViewModel : ObservableObject
 {
     private readonly TodoService _todoService = new();
+    private readonly DatabaseService _db = DatabaseService.Instance;
+
+    /// <summary>预定义标签列表</summary>
+    public static readonly string[] DefaultTags = ["基站", "底盘", "逻辑", "App", "Sdk"];
 
     /// <summary>当前选中的日期（改变时自动刷新待办列表和周栏）</summary>
     [ObservableProperty]
@@ -80,8 +84,17 @@ public partial class HomeViewModel : ObservableObject
     [ObservableProperty]
     private string _exportMessage = string.Empty;
 
+    /// <summary>当前筛选标签（null 表示"全部"）</summary>
+    [ObservableProperty]
+    private string? _selectedTag;
+
+    /// <summary>可用标签列表（预定义 + 自定义）</summary>
+    [ObservableProperty]
+    private ObservableCollection<string> _availableTags = new();
+
     public HomeViewModel()
     {
+        LoadAvailableTags();
         UpdateWeekBar();
         LoadTodos();
     }
@@ -94,6 +107,39 @@ public partial class HomeViewModel : ObservableObject
     {
         LoadTodos();
         UpdateWeekBar();
+    }
+
+    /// <summary>当筛选标签变化时刷新待办列表</summary>
+    partial void OnSelectedTagChanged(string? value)
+    {
+        LoadTodos();
+    }
+
+    /// <summary>加载可用标签列表（预定义 + 自定义）</summary>
+    public void LoadAvailableTags()
+    {
+        var settings = _db.GetSettings();
+        settings.CustomTags ??= new List<string>();
+        var tags = new List<string>(DefaultTags);
+        foreach (var t in settings.CustomTags)
+        {
+            if (!tags.Contains(t))
+                tags.Add(t);
+        }
+        AvailableTags = new ObservableCollection<string>(tags);
+    }
+
+    /// <summary>添加自定义标签</summary>
+    public void AddCustomTag(string tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag)) return;
+        tag = tag.Trim();
+        var settings = _db.GetSettings();
+        settings.CustomTags ??= new List<string>();
+        if (DefaultTags.Contains(tag) || settings.CustomTags.Contains(tag)) return;
+        settings.CustomTags.Add(tag);
+        _db.SaveSettings(settings);
+        LoadAvailableTags();
     }
 
     /// <summary>
@@ -124,10 +170,10 @@ public partial class HomeViewModel : ObservableObject
         WeekDays = days;
     }
 
-    /// <summary>从数据库加载当前选中日期的所有待办</summary>
+    /// <summary>从数据库加载当前选中日期的待办（支持标签筛选）</summary>
     public void LoadTodos()
     {
-        var items = _todoService.GetTodosByDate(SelectedDate);
+        var items = _todoService.GetTodosByDateAndTag(SelectedDate, SelectedTag);
         Todos = new ObservableCollection<TodoItem>(items);
         TotalCount = items.Count;
         CompletedCount = items.Count(x => x.IsCompleted);

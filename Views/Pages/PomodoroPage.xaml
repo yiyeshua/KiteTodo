@@ -6,6 +6,31 @@
 
     <Grid Margin="24,16">
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="400">
+
+            <!-- Task Binding Selector -->
+            <ui:Card Padding="12" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="绑定任务" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox x:Name="TodoSelector" Grid.Column="0"
+                                  ItemsSource="{Binding AvailableTodos}"
+                                  DisplayMemberPath="Title"
+                                  SelectionChanged="OnTodoSelected"
+                                  IsEditable="False"
+                                  Margin="0,0,8,0"/>
+                        <ui:Button Grid.Column="1" Content="解绑" Appearance="Secondary"
+                                   Click="OnUnbindTodo" Padding="8,4" x:Name="BtnUnbind"
+                                   Visibility="Collapsed"/>
+                    </Grid>
+                    <TextBlock x:Name="BoundTaskLabel" FontSize="12" Opacity="0.6" Margin="0,4,0,0"
+                               Visibility="Collapsed"/>
+                </StackPanel>
+            </ui:Card>
+
             <!-- Timer Display -->
             <Border Width="260" Height="260" CornerRadius="130" Margin="0,0,0,24"
                     BorderThickness="6" BorderBrush="#DDDDDD">
@@ -14,6 +39,10 @@
                                HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding StateLabel}" FontSize="14" Opacity="0.6"
                                HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding BoundTodoTitle}" FontSize="12" Opacity="0.4"
+                               HorizontalAlignment="Center" Margin="0,4,0,0"
+                               TextTrimming="CharacterEllipsis" MaxWidth="200"
+                               x:Name="TimerBoundTitle" Visibility="Collapsed"/>
                 </StackPanel>
             </Border>
 

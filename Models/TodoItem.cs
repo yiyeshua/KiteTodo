@@ -36,7 +36,7 @@ public class TodoItem
     public int Progress { get; set; }
 
     /// <summary>分类标签</summary>
-    public string Category { get; set; } = "Default";
+    public string Category { get; set; } = string.Empty;
 
     /// <summary>提醒时间（到达该时间时弹出 Toast 通知）</summary>
     public DateTime? ReminderTime { get; set; }

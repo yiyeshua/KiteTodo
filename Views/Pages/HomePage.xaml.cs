@@ -120,6 +120,13 @@ public partial class HomePage : Page
         // Set priority combo
         EditPriority.SelectedIndex = item.Priority;
 
+        // Set tag combo
+        EditCategory.Items.Clear();
+        EditCategory.Items.Add("");  // 空选项（无标签）
+        foreach (var tag in _vm.AvailableTags)
+            EditCategory.Items.Add(tag);
+        EditCategory.Text = item.Category ?? string.Empty;
+
         // Set progress combo (index 0=0%, 1=10%, ..., 10=100%)
         EditProgress.SelectedIndex = Math.Clamp(item.Progress, 0, 100) / 10;
 
@@ -150,6 +157,11 @@ public partial class HomePage : Page
         _editingItem.Title = EditTitle.Text.Trim();
         _editingItem.Description = string.IsNullOrWhiteSpace(EditDescription.Text) ? null : EditDescription.Text.Trim();
         _editingItem.Priority = EditPriority.SelectedIndex;
+        _editingItem.Category = (EditCategory.Text ?? string.Empty).Trim();
+
+        // 如果用户输入了新标签，自动添加到自定义标签
+        if (!string.IsNullOrEmpty(_editingItem.Category))
+            _vm.AddCustomTag(_editingItem.Category);
 
         // 进度处理 + 与完成状态双向联动
         var newProgress = EditProgress.SelectedIndex * 10;
@@ -216,6 +228,61 @@ public partial class HomePage : Page
         timer.Start();
     }
 
+    // ---- 标签筛选 ----
+
+    private void OnTagFilterClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Content is string tag)
+        {
+            _vm.SelectedTag = tag;
+            UpdateTagFilterVisuals();
+        }
+    }
+
+    private void OnClearTagFilter(object sender, RoutedEventArgs e)
+    {
+        _vm.SelectedTag = null;
+        UpdateTagFilterVisuals();
+    }
+
+    private void OnAddCustomTag(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Window
+        {
+            Title = "添加自定义标签",
+            Width = 300, Height = 150,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Owner = Window.GetWindow(this),
+            ResizeMode = ResizeMode.NoResize
+        };
+        var sp = new StackPanel { Margin = new Thickness(16) };
+        var tb = new TextBox { Margin = new Thickness(0, 0, 0, 12) };
+        sp.Children.Add(new TextBlock { Text = "输入标签名称:", Margin = new Thickness(0, 0, 0, 8) });
+        sp.Children.Add(tb);
+        var btnOk = new Button { Content = "确定", HorizontalAlignment = HorizontalAlignment.Right, Padding = new Thickness(16, 4, 16, 4) };
+        btnOk.Click += (_, _) => { dialog.DialogResult = true; dialog.Close(); };
+        sp.Children.Add(btnOk);
+        dialog.Content = sp;
+        tb.Focus();
+
+        if (dialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(tb.Text))
+        {
+            _vm.AddCustomTag(tb.Text.Trim());
+        }
+    }
+
+    /// <summary>更新标签筛选栏的视觉状态（选中高亮）</summary>
+    private void UpdateTagFilterVisuals()
+    {
+        var isAll = _vm.SelectedTag == null;
+        TagFilterAll.Background = isAll
+            ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 120, 212))
+            : (System.Windows.Media.Brush)FindResource("CustomSubtleBg");
+        TagFilterAll.Foreground = isAll
+            ? System.Windows.Media.Brushes.White
+            : (System.Windows.Media.Brush)FindResource("CustomFg");
+    }
+
     // ---- 右键菜单：移动待办到本周其他天 ----
 
     /// <summary>
@@ -255,6 +322,28 @@ public partial class HomePage : Page
                 }
             };
             moveToItem.Items.Add(menuItem);
+        }
+    }
+
+    // ---- 右键菜单：开始专注 ----
+
+    /// <summary>
+    /// 右键点击"开始专注"：将待办信息写入 FocusRequest，然后导航到番茄钟页面。
+    /// </summary>
+    private void OnStartFocus(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem mi && mi.Parent is ContextMenu cm
+            && cm.PlacementTarget is FrameworkElement el
+            && el.DataContext is TodoItem item)
+        {
+            Helpers.FocusRequest.PendingTodoId = item.Id;
+            Helpers.FocusRequest.PendingTodoTitle = item.Title;
+
+            // 获取 MainWindow 并导航到番茄钟页面
+            if (Window.GetWindow(this) is MainWindow mainWindow)
+            {
+                mainWindow.NavigateTo(typeof(PomodoroPage));
+            }
         }
     }
 }

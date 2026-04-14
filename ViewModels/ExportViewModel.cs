@@ -17,6 +17,7 @@ namespace KiteTodo.ViewModels;
 public partial class ExportViewModel : ObservableObject
 {
     private readonly ExportService _exportService = new();
+    private readonly BackupService _backupService = new();
 
     /// <summary>导出起始日期（默认一周前）</summary>
     [ObservableProperty]
@@ -33,6 +34,10 @@ public partial class ExportViewModel : ObservableObject
     /// <summary>预览文本内容（显示在页面的文本框中）</summary>
     [ObservableProperty]
     private string _previewText = string.Empty;
+
+    /// <summary>备份/恢复操作的状态提示</summary>
+    [ObservableProperty]
+    private string _backupStatusMessage = string.Empty;
 
     /// <summary>生成预览（不保存文件，只更新预览文本）</summary>
     [RelayCommand]
@@ -63,5 +68,39 @@ public partial class ExportViewModel : ObservableObject
         {
             await File.WriteAllTextAsync(dialog.FileName, PreviewText, System.Text.Encoding.UTF8);
         }
+    }
+
+    /// <summary>备份全部数据到 JSON 文件</summary>
+    [RelayCommand]
+    private async Task BackupToFile()
+    {
+        var json = _backupService.ExportToJson();
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            FileName = $"KiteTodo_Backup_{DateTime.Now:yyyyMMdd_HHmmss}",
+            Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+            DefaultExt = ".json"
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            await File.WriteAllTextAsync(dialog.FileName, json, System.Text.Encoding.UTF8);
+            BackupStatusMessage = $"备份成功：{dialog.FileName}";
+        }
+    }
+
+    /// <summary>从 JSON 文件恢复全部数据</summary>
+    [RelayCommand]
+    private async Task RestoreFromFile()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+            DefaultExt = ".json"
+        };
+        if (dialog.ShowDialog() != true) return;
+
+        var json = await File.ReadAllTextAsync(dialog.FileName, System.Text.Encoding.UTF8);
+        var (success, message) = _backupService.ImportFromJson(json);
+        BackupStatusMessage = message;
     }
 }

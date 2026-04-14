@@ -15,10 +15,12 @@
         <converters:ReminderTimeConverter x:Key="ReminderTimeConverter"/>
         <converters:PriorityToTextConverter x:Key="PriorityTextConverter"/>
         <converters:ProgressToTextConverter x:Key="ProgressTextConverter"/>
+        <converters:EmptyStringToCollapsedConverter x:Key="EmptyStringToCollapsedConverter"/>
     </Page.Resources>
 
     <Grid Margin="24,16">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -118,8 +120,93 @@
             </DockPanel>
         </Border>
 
+        <!-- Tag Filter Bar -->
+        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                      Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="全部" Click="OnClearTagFilter" Cursor="Hand"
+                        Padding="10,4" Margin="0,0,4,0" FontSize="12"
+                        x:Name="TagFilterAll">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="#0078D4"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                                CornerRadius="12" Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <ItemsControl ItemsSource="{Binding AvailableTags}" x:Name="TagFilterList">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Content="{Binding}" Click="OnTagFilterClick" Cursor="Hand"
+                                    Padding="10,4" Margin="0,0,4,0" FontSize="12">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Background" Value="{DynamicResource CustomSubtleBg}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource CustomFg}"/>
+                                        <Setter Property="BorderThickness" Value="1"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource CustomSubtleBorder}"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}"
+                                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                                            CornerRadius="12" Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Content="+" Click="OnAddCustomTag" Cursor="Hand"
+                        Padding="10,4" Margin="0,0,4,0" FontSize="12" ToolTip="添加自定义标签">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="{DynamicResource CustomFgSecondary}"/>
+                            <Setter Property="BorderThickness" Value="1"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource CustomSubtleBorder}"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="12" Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
+        </ScrollViewer>
+
         <!-- Todo List -->
-        <ListBox Grid.Row="2" ItemsSource="{Binding Todos}"
+        <ListBox Grid.Row="3" ItemsSource="{Binding Todos}"
                  Background="Transparent" BorderThickness="0"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  x:Name="TodoListBox">
@@ -137,6 +224,7 @@
                         <ui:Card.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="移动到"/>
+                                <MenuItem Header="开始专注" Click="OnStartFocus"/>
                             </ContextMenu>
                         </ui:Card.ContextMenu>
                         <ui:Card.ToolTip>
@@ -192,9 +280,16 @@
 
                             <!-- Title & Description & Progress & Reminder -->
                             <StackPanel Grid.Column="2" Margin="8,0">
-                                <TextBlock Text="{Binding Title}" FontSize="14"
-                                           TextDecorations="{Binding IsCompleted, Converter={StaticResource StrikethroughConverter}}"
-                                           Opacity="{Binding IsCompleted, Converter={StaticResource BoolToOpacityConverter}}"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Title}" FontSize="14"
+                                               TextDecorations="{Binding IsCompleted, Converter={StaticResource StrikethroughConverter}}"
+                                               Opacity="{Binding IsCompleted, Converter={StaticResource BoolToOpacityConverter}}"/>
+                                    <Border CornerRadius="8" Padding="6,1" Margin="6,0,0,0"
+                                            Background="#200078D4" VerticalAlignment="Center"
+                                            Visibility="{Binding Category, Converter={StaticResource EmptyStringToCollapsedConverter}}">
+                                        <TextBlock Text="{Binding Category}" FontSize="10" Foreground="#0078D4"/>
+                                    </Border>
+                                </StackPanel>
                                 <Grid Margin="0,3,0,0"
                                       Opacity="{Binding IsCompleted, Converter={StaticResource BoolToOpacityConverter}}">
                                     <Grid.ColumnDefinitions>
@@ -237,7 +332,7 @@
         </ListBox>
 
         <!-- Empty State -->
-        <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+        <StackPanel Grid.Row="3" HorizontalAlignment="Center" VerticalAlignment="Center"
                     Visibility="{Binding Todos.Count, Converter={StaticResource ZeroToVisibleConverter}}">
             <ui:SymbolIcon Symbol="ClipboardTaskListLtr24" FontSize="48" Opacity="0.3"/>
             <TextBlock Text="今日暂无待办事项" FontSize="16" Opacity="0.4"
@@ -245,7 +340,7 @@
         </StackPanel>
 
         <!-- Quick Add Bar -->
-        <Grid Grid.Row="3" Margin="0,12,0,0">
+        <Grid Grid.Row="4" Margin="0,12,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -258,7 +353,7 @@
         </Grid>
 
         <!-- Edit Dialog Overlay -->
-        <Border x:Name="EditOverlay" Grid.RowSpan="4" Visibility="Collapsed"
+        <Border x:Name="EditOverlay" Grid.RowSpan="5" Visibility="Collapsed"
                 Background="#80000000">
             <Border Background="{DynamicResource CustomOverlayBg}" CornerRadius="8" Padding="24" MaxWidth="480"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
@@ -284,6 +379,10 @@
                         <ComboBoxItem Content="中" Tag="2"/>
                         <ComboBoxItem Content="高" Tag="3"/>
                     </ComboBox>
+
+                    <TextBlock Text="标签" FontSize="13" Margin="0,0,0,4"/>
+                    <ComboBox x:Name="EditCategory" Margin="0,0,0,12" Width="200" HorizontalAlignment="Left"
+                              IsEditable="True"/>
 
                     <TextBlock Text="完成进度" FontSize="13" Margin="0,0,0,4"/>
                     <ComboBox x:Name="EditProgress" Margin="0,0,0,12" Width="200" HorizontalAlignment="Left">

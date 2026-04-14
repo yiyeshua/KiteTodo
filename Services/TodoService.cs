@@ -18,9 +18,18 @@ public class TodoService
     /// <summary>获取指定日期的所有待办（按完成状态、排序权重、优先级排序）</summary>
     public List<TodoItem> GetTodosByDate(DateTime date)
     {
+        return GetTodosByDateAndTag(date, null);
+    }
+
+    /// <summary>获取指定日期的待办，支持按标签筛选</summary>
+    public List<TodoItem> GetTodosByDateAndTag(DateTime date, string? tag)
+    {
         var dayStart = date.Date;
         var dayEnd = dayStart.AddDays(1);
-        return _db.Todos.Find(x => x.ScheduledDate >= dayStart && x.ScheduledDate < dayEnd)
+        var query = _db.Todos.Find(x => x.ScheduledDate >= dayStart && x.ScheduledDate < dayEnd);
+        if (!string.IsNullOrEmpty(tag))
+            query = query.Where(x => x.Category == tag);
+        return query
             .OrderBy(x => x.IsCompleted)       // 未完成的排前面
             .ThenBy(x => x.SortOrder)           // 按手动排序权重
             .ThenByDescending(x => x.Priority)  // 高优先级排前面

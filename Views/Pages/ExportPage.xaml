@@ -41,5 +41,26 @@
                            FontSize="13"/>
             </ScrollViewer>
         </ui:Card>
+
+        <!-- Backup & Restore -->
+        <ui:Card Grid.Row="3" Padding="16" Margin="0,16,0,0">
+            <StackPanel>
+                <TextBlock Text="数据备份与恢复" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                <TextBlock Text="备份：将所有待办、笔记、番茄钟记录和设置导出到一个 JSON 文件。"
+                           FontSize="12" Opacity="0.6" Margin="0,0,0,4"/>
+                <TextBlock Text="恢复：从备份文件导入数据，将覆盖当前全部数据。"
+                           FontSize="12" Opacity="0.6" Foreground="#E04040" Margin="0,0,0,12"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <ui:Button Content="备份数据" Appearance="Primary"
+                               Icon="{ui:SymbolIcon ArrowDownload24}"
+                               Click="OnBackup" Margin="0,0,12,0"/>
+                    <ui:Button Content="恢复数据" Appearance="Secondary"
+                               Icon="{ui:SymbolIcon ArrowUpload24}"
+                               Click="OnRestore"/>
+                </StackPanel>
+                <TextBlock Text="{Binding BackupStatusMessage}" FontSize="12"
+                           Foreground="#0078D4" TextWrapping="Wrap"/>
+            </StackPanel>
+        </ui:Card>
     </Grid>
 </Page>
