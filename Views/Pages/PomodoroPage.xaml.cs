@@ -135,6 +135,32 @@ public partial class PomodoroPage : Page
         UpdateButtonVisibility();
     }
 
+    /// <summary>切换到前一天的专注记录</summary>
+    private void OnPrevDay(object sender, RoutedEventArgs e) => _vm.GoPrevDay();
+
+    /// <summary>切换到后一天的专注记录</summary>
+    private void OnNextDay(object sender, RoutedEventArgs e) => _vm.GoNextDay();
+
+    /// <summary>删除一条专注记录</summary>
+    private void OnDeleteRecord(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is PomodoroRecordDisplay record)
+        {
+            _vm.DeleteRecord(record.Id);
+        }
+    }
+
+    /// <summary>将专注记录转为今日待办</summary>
+    private void OnConvertToTodo(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is PomodoroRecordDisplay record)
+        {
+            _vm.ConvertToTodo(record);
+            // 重新加载列表以刷新 ConvertedToTodo 状态
+            _vm.RefreshRecords();
+        }
+    }
+
     /// <summary>下拉选择待办时绑定到番茄钟</summary>
     private void OnTodoSelected(object sender, SelectionChangedEventArgs e)
     {

@@ -2,7 +2,12 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:converters="clr-namespace:KiteTodo.Converters"
       Title="专注计时">
+
+    <Page.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+    </Page.Resources>
 
     <Grid Margin="24,16">
         <Grid.ColumnDefinitions>
@@ -77,10 +82,21 @@
         </StackPanel>
         </ScrollViewer>
 
-        <!-- 右侧：今日专注列表 -->
+        <!-- 右侧：专注列表 -->
         <DockPanel Grid.Column="1" Margin="16,0,0,0">
-            <TextBlock DockPanel.Dock="Top" Text="今日专注列表" FontSize="16" FontWeight="SemiBold"
-                       HorizontalAlignment="Center" Margin="0,0,0,16"/>
+            <!-- 日期导航栏 -->
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
+                <ui:Button Appearance="Secondary" Padding="8,4" Click="OnPrevDay" ToolTip="前一天">
+                    <ui:SymbolIcon Symbol="ChevronLeft24"/>
+                </ui:Button>
+                <TextBlock Text="{Binding RecordDateLabel}" FontSize="16" FontWeight="SemiBold"
+                           VerticalAlignment="Center" Margin="16,0" MinWidth="80"
+                           TextAlignment="Center"/>
+                <ui:Button Appearance="Secondary" Padding="8,4" Click="OnNextDay" ToolTip="后一天"
+                           IsEnabled="{Binding CanGoNextDay}">
+                    <ui:SymbolIcon Symbol="ChevronRight24"/>
+                </ui:Button>
+            </StackPanel>
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding TodayRecords}">
                     <ItemsControl.ItemTemplate>
@@ -100,6 +116,30 @@
                                     </DockPanel>
                                     <TextBlock Text="{Binding Note}" FontSize="13" Opacity="0.8"
                                                TextWrapping="Wrap" Margin="0,6,0,0"/>
+                                    <!-- 操作按钮 -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0" HorizontalAlignment="Right">
+                                        <!-- 未转待办时显示转换按钮 -->
+                                        <ui:Button Appearance="Secondary" Padding="6,2" Margin="0,0,6,0"
+                                                   Click="OnConvertToTodo" Tag="{Binding}"
+                                                   ToolTip="转为今日待办"
+                                                   Visibility="{Binding ConvertedToTodo, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Invert}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:SymbolIcon Symbol="TaskListAdd24" FontSize="14"/>
+                                                <TextBlock Text="转待办" FontSize="11" Margin="4,0,0,0"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </ui:Button>
+                                        <!-- 已转待办时显示状态标签 -->
+                                        <TextBlock Text="✓ 已转待办" FontSize="11" Margin="0,0,6,0"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="#22A05A"
+                                                   Visibility="{Binding ConvertedToTodo, Converter={StaticResource BoolToVisConverter}}"/>
+                                        <ui:Button Appearance="Secondary" Padding="6,2"
+                                                   Click="OnDeleteRecord" Tag="{Binding}"
+                                                   ToolTip="删除记录">
+                                            <ui:SymbolIcon Symbol="Delete24" FontSize="14"/>
+                                        </ui:Button>
+                                    </StackPanel>
                                 </StackPanel>
                             </ui:Card>
                         </DataTemplate>

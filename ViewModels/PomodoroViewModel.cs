@@ -90,9 +90,20 @@ public partial class PomodoroViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<TodoItem> _availableTodos = new();
 
-    /// <summary>今日专注记录列表（供界面展示）</summary>
+    /// <summary>专注记录列表（供界面展示）</summary>
     [ObservableProperty]
     private ObservableCollection<PomodoroRecordDisplay> _todayRecords = new();
+
+    /// <summary>当前查看的记录日期</summary>
+    private DateTime _recordDate = DateTime.Today;
+
+    /// <summary>记录日期的显示文本</summary>
+    [ObservableProperty]
+    private string _recordDateLabel = "今天";
+
+    /// <summary>是否可以前进到下一天（不能超过今天）</summary>
+    [ObservableProperty]
+    private bool _canGoNextDay;
 
     /// <summary>专注完成时请求备注和心情的回调（由 PomodoroPage 设置）</summary>
     public Func<(string? note, int mood)>? RequestFocusNote { get; set; }
@@ -116,24 +127,68 @@ public partial class PomodoroViewModel : ObservableObject
         LoadTodayStats();
     }
 
-    /// <summary>统计今日已完成的番茄钟数量，并加载记录列表</summary>
+    /// <summary>统计今日已完成的番茄钟数量</summary>
     private void LoadTodayStats()
     {
         var today = DateTime.Today;
         var tomorrow = today.AddDays(1);
-        var records = _db.Pomodoros
+        TodayPomodoros = _db.Pomodoros
             .Find(x => x.StartTime >= today && x.StartTime < tomorrow && x.IsCompleted)
+            .Count();
+        LoadRecordsByDate();
+    }
+
+    /// <summary>按当前 _recordDate 加载专注记录</summary>
+    private void LoadRecordsByDate()
+    {
+        var start = _recordDate.Date;
+        var end = start.AddDays(1);
+        var records = _db.Pomodoros
+            .Find(x => x.StartTime >= start && x.StartTime < end && x.IsCompleted)
             .OrderByDescending(x => x.StartTime)
             .ToList();
-        TodayPomodoros = records.Count;
         TodayRecords = new ObservableCollection<PomodoroRecordDisplay>(
             records.Select(r => new PomodoroRecordDisplay
             {
+                Id = r.Id,
                 Time = r.StartTime.ToString("HH:mm"),
                 Duration = $"{r.DurationMinutes}分钟",
                 Note = r.Note ?? "",
-                MoodEmoji = MoodToEmoji(r.Mood)
+                MoodEmoji = MoodToEmoji(r.Mood),
+                ConvertedToTodo = r.ConvertedToTodo
             }));
+        UpdateRecordDateLabel();
+    }
+
+    /// <summary>切换到前一天</summary>
+    public void GoPrevDay()
+    {
+        _recordDate = _recordDate.AddDays(-1);
+        LoadRecordsByDate();
+    }
+
+    /// <summary>切换到后一天（不超过今天）</summary>
+    public void GoNextDay()
+    {
+        if (_recordDate.Date >= DateTime.Today) return;
+        _recordDate = _recordDate.AddDays(1);
+        LoadRecordsByDate();
+    }
+
+    /// <summary>刷新当前日期的记录列表</summary>
+    public void RefreshRecords() => LoadRecordsByDate();
+
+    /// <summary>更新日期显示文本</summary>
+    private void UpdateRecordDateLabel()
+    {
+        var today = DateTime.Today;
+        if (_recordDate.Date == today)
+            RecordDateLabel = "今天";
+        else if (_recordDate.Date == today.AddDays(-1))
+            RecordDateLabel = "昨天";
+        else
+            RecordDateLabel = _recordDate.ToString("MM/dd ddd");
+        CanGoNextDay = _recordDate.Date < today;
     }
 
     private static string MoodToEmoji(int mood) => mood switch
@@ -336,13 +391,43 @@ public partial class PomodoroViewModel : ObservableObject
             FocusRequest.Clear();
         }
     }
+
+    /// <summary>删除一条专注记录</summary>
+    public void DeleteRecord(int recordId)
+    {
+        _db.Pomodoros.Delete(recordId);
+        LoadTodayStats();
+    }
+
+    /// <summary>将专注记录的备注转为今日待办</summary>
+    public void ConvertToTodo(PomodoroRecordDisplay record)
+    {
+        var title = !string.IsNullOrWhiteSpace(record.Note) ? record.Note : $"专注记录 {record.Time}";
+        _todoService.Add(new TodoItem
+        {
+            Title = title,
+            ScheduledDate = DateTime.Today,
+            Priority = 1
+        });
+
+        // 持久化“已转待办”状态
+        var dbRecord = _db.Pomodoros.FindById(record.Id);
+        if (dbRecord != null)
+        {
+            dbRecord.ConvertedToTodo = true;
+            _db.Pomodoros.Update(dbRecord);
+        }
+        record.ConvertedToTodo = true;
+    }
 }
 
-/// <summary>今日专注记录的显示模型</summary>
+/// <summary>专注记录的显示模型</summary>
 public class PomodoroRecordDisplay
 {
+    public int Id { get; set; }
     public string Time { get; set; } = "";
     public string Duration { get; set; } = "";
     public string Note { get; set; } = "";
     public string MoodEmoji { get; set; } = "";
+    public bool ConvertedToTodo { get; set; }
 }

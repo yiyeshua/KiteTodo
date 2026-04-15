@@ -30,4 +30,7 @@ public class PomodoroRecord
 
     /// <summary>心情打卡（0=未选, 1=高效, 2=焦虑, 3=疲惫, 4=轻松）</summary>
     public int Mood { get; set; }
+
+    /// <summary>是否已转为待办</summary>
+    public bool ConvertedToTodo { get; set; }
 }
