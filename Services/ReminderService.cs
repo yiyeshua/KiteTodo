@@ -26,6 +26,9 @@ public class ReminderService
     // 已通知过的待办 ID 集合，避免同一个待办重复弹出通知
     private readonly HashSet<int> _notifiedIds = new();
 
+    /// <summary>提醒触发时的回调（用于触发桌面提醒效果）</summary>
+    public event Action? ReminderFired;
+
     private ReminderService()
     {
         _timer = new DispatcherTimer
@@ -71,6 +74,7 @@ public class ReminderService
                 {
                     ShowReminder(todo);
                     _notifiedIds.Add(todo.Id); // 标记为已通知
+                    ReminderFired?.Invoke();
                 }
             }
 

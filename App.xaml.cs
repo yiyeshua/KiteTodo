@@ -53,12 +53,16 @@ public partial class App : Application
 
         // Start reminder service
         ReminderService.Instance.Start();
+        ReminderService.Instance.ReminderFired += OnReminderFired;
 
         // Setup tray icon
         SetupTrayIcon();
 
         // 监听番茄钟状态变化，推送给浮标
         PomodoroViewModel.Instance.PropertyChanged += OnPomodoroPropertyChanged;
+
+        // 番茄钟计时完成时触发桌面提醒
+        PomodoroViewModel.Instance.TimerCompleted += OnPomodoroTimerCompleted;
 
         // 恢复浮标显示状态
         if (settings.ShowMiniWindow)
@@ -190,6 +194,24 @@ public partial class App : Application
         {
             Dispatcher.BeginInvoke(SyncPomodoroToFloating);
         }
+    }
+
+    /// <summary>番茄钟计时完成时弹出大号提示</summary>
+    private void OnPomodoroTimerCompleted(PomodoroState completedState)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (completedState == PomodoroState.Focusing)
+                AlertService.ShowOverlayToast("☕ 该休息休息了", "起来走走，喝杯水吧");
+            else
+                AlertService.ShowOverlayToast("🍅 休息结束", "准备开始下一轮专注");
+        });
+    }
+
+    /// <summary>待办提醒时间到期时的回调（暂不弹窗，后续再定方案）</summary>
+    private void OnReminderFired()
+    {
+        // 暂时不弹出待办提醒弹窗
     }
 
     /// <summary>将番茄钟当前状态同步到浮标显示</summary>

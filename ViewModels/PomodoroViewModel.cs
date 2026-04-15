@@ -42,6 +42,9 @@ public partial class PomodoroViewModel : ObservableObject
     /// <summary>全局单例，供 App.xaml.cs 和 PomodoroPage 共用</summary>
     public static PomodoroViewModel Instance { get; } = new();
 
+    /// <summary>计时阶段完成时触发，参数为刚刚完成的阶段状态（Focusing=专注结束，ShortBreak/LongBreak=休息结束）</summary>
+    public event Action<PomodoroState>? TimerCompleted;
+
     /// <summary>倒计时定时器（每 200ms 更新一次显示）</summary>
     private DispatcherTimer? _timer;
 
@@ -106,7 +109,10 @@ public partial class PomodoroViewModel : ObservableObject
     private bool _canGoNextDay;
 
     /// <summary>专注完成时请求备注和心情的回调（由 PomodoroPage 设置）</summary>
-    public Func<(string? note, int mood)>? RequestFocusNote { get; set; }
+    /// <summary>开始专注前用户填写的备注（暂存到计时完成时写入记录）</summary>
+    public string? PendingNote { get; set; }
+    /// <summary>开始专注前用户选择的心情（暂存到计时完成时写入记录）</summary>
+    public int PendingMood { get; set; }
 
     public PomodoroViewModel()
     {
@@ -292,17 +298,13 @@ public partial class PomodoroViewModel : ObservableObject
     {
         var settings = _db.GetSettings();
 
+        // 记录当前完成的阶段，用于通知
+        var completedState = State;
+
         if (State == PomodoroState.Focusing)
         {
-            // 专注完成：收集备注和心情，然后记录到数据库
+            // 专注完成：使用开始时预存的备注和心情
             _completedPomodoros++;
-
-            string? note = null;
-            int mood = 0;
-            if (RequestFocusNote != null)
-            {
-                (note, mood) = RequestFocusNote();
-            }
 
             _db.Pomodoros.Insert(new PomodoroRecord
             {
@@ -310,9 +312,13 @@ public partial class PomodoroViewModel : ObservableObject
                 DurationMinutes = settings.PomodoroDuration,
                 IsCompleted = true,
                 TodoId = BoundTodoId,
-                Note = note,
-                Mood = mood
+                Note = PendingNote,
+                Mood = PendingMood
             });
+
+            // 清除暂存
+            PendingNote = null;
+            PendingMood = 0;
             LoadTodayStats();
 
             // 如果绑定了待办，增加其番茄钟计数
@@ -349,6 +355,9 @@ public partial class PomodoroViewModel : ObservableObject
             Progress = 0;
             UpdateTimerDisplay();
         }
+
+        // 状态变更完成后再触发桌面提醒，传递刚刚完成的阶段
+        TimerCompleted?.Invoke(completedState);
     }
 
     /// <summary>格式化剩余时间为 "MM:SS" 显示</summary>

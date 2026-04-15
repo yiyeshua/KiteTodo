@@ -230,13 +230,16 @@
                             </ContextMenu>
                         </ui:Card.ContextMenu>
                         <ui:Card.ToolTip>
-                            <ToolTip MaxWidth="380" Placement="Mouse">
+                            <ToolTip MaxWidth="380" MaxHeight="400" Placement="Mouse">
                                 <StackPanel Margin="4">
                                     <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="15"
                                                TextWrapping="Wrap" Margin="0,0,0,6"/>
-                                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap"
-                                               FontSize="13" Opacity="0.8" Margin="0,0,0,6"
-                                               Visibility="{Binding Description, Converter={StaticResource NullToCollapsedConverter}}"/>
+                                    <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,6"
+                                                  Visibility="{Binding Description, Converter={StaticResource NullToCollapsedConverter}}">
+                                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap"
+                                                   FontSize="13" Opacity="0.8"/>
+                                    </ScrollViewer>
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,3"
                                                 Visibility="{Binding ReminderTime, Converter={StaticResource NullToCollapsedConverter}}">
                                         <TextBlock Text="&#x23F0; 提醒: " FontSize="12" Opacity="0.6"/>
@@ -308,7 +311,8 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                     <TextBlock Text="{Binding Description}" FontSize="12" Opacity="0.5"
                                                Visibility="{Binding Description, Converter={StaticResource NullToCollapsedConverter}}"
-                                               TextTrimming="CharacterEllipsis" MaxWidth="300"/>
+                                               TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                                               MaxHeight="48" MaxWidth="400"/>
                                     <TextBlock FontSize="11" Opacity="0.5" Margin="8,0,0,0"
                                                Foreground="#0078D4"
                                                Text="{Binding ReminderTime, Converter={StaticResource ReminderTimeConverter}}"
@@ -359,10 +363,11 @@
                 Background="#80000000">
             <Border Background="{DynamicResource CustomOverlayBg}" CornerRadius="8" Padding="24" MaxWidth="480"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
-                    MinWidth="400">
+                    MinWidth="400" MaxHeight="600">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="20" Opacity="0.3" ShadowDepth="4"/>
                 </Border.Effect>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
                     <TextBlock Text="编辑待办" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,16"/>
 
@@ -415,6 +420,7 @@
                         <ui:Button Content="保存" Appearance="Primary" Click="OnSaveEdit"/>
                     </StackPanel>
                 </StackPanel>
+                </ScrollViewer>
             </Border>
         </Border>
     </Grid>

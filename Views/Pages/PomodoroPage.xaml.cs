@@ -45,8 +45,7 @@ public partial class PomodoroPage : Page
         // 监听 ViewModel 的属性变化事件，当状态改变时更新按钮的显示/隐藏
         _vm.PropertyChanged += OnVmPropertyChanged;
 
-        // 设置专注完成时的弹窗回调
-        _vm.RequestFocusNote = ShowFocusCompleteDialog;
+        // (专注开始对话框已移至 OnStart 中弹出)
 
         // 初始化时设置一次按钮可见性（此时应该是 Idle 状态，只显示"开始"按钮）
         UpdateButtonVisibility();
@@ -107,9 +106,27 @@ public partial class PomodoroPage : Page
 
     // ---- 按钮事件回调，每个操作都委托给 ViewModel 并刷新按钮状态 ----
 
-    /// <summary>点击"开始"按钮，启动专注计时</summary>
+    /// <summary>点击"开始"按钮，先弹出专注开始对话框再启动计时</summary>
     private void OnStart(object sender, RoutedEventArgs e)
     {
+        var dialog = new FocusCompleteDialog
+        {
+            Owner = Window.GetWindow(this) ?? Application.Current.MainWindow
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            // 保存：暂存备注和心情，计时完成后写入记录
+            _vm.PendingNote = dialog.FocusNote;
+            _vm.PendingMood = dialog.SelectedMood;
+        }
+        else
+        {
+            // 跳过：不保存备注，但仍然启动计时
+            _vm.PendingNote = null;
+            _vm.PendingMood = 0;
+        }
+
         _vm.StartFocusCommand.Execute(null);
         UpdateButtonVisibility();
     }
@@ -190,18 +207,6 @@ public partial class PomodoroPage : Page
     }
 
     // ---- 专注完成弹窗 ----
-
-    /// <summary>弹出专注完成对话框，收集备注和心情</summary>
-    private (string?, int) ShowFocusCompleteDialog()
-    {
-        var dialog = new FocusCompleteDialog
-        {
-            Owner = Window.GetWindow(this) ?? Application.Current.MainWindow
-        };
-        if (dialog.ShowDialog() == true)
-            return (dialog.FocusNote, dialog.SelectedMood);
-        return (null, 0);
-    }
 
     // ---- 圆环呼吸动画 ----
 
