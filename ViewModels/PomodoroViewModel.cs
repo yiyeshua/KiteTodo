@@ -89,6 +89,9 @@ public partial class PomodoroViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<TodoItem> _availableTodos = new();
 
+    /// <summary>专注完成时请求备注和心情的回调（由 PomodoroPage 设置）</summary>
+    public Func<(string? note, int mood)>? RequestFocusNote { get; set; }
+
     public PomodoroViewModel()
     {
         var settings = _db.GetSettings();
@@ -212,14 +215,24 @@ public partial class PomodoroViewModel : ObservableObject
 
         if (State == PomodoroState.Focusing)
         {
-            // 专注完成：记录到数据库
+            // 专注完成：收集备注和心情，然后记录到数据库
             _completedPomodoros++;
+
+            string? note = null;
+            int mood = 0;
+            if (RequestFocusNote != null)
+            {
+                (note, mood) = RequestFocusNote();
+            }
+
             _db.Pomodoros.Insert(new PomodoroRecord
             {
                 StartTime = _timerStartTime,
                 DurationMinutes = settings.PomodoroDuration,
                 IsCompleted = true,
-                TodoId = BoundTodoId
+                TodoId = BoundTodoId,
+                Note = note,
+                Mood = mood
             });
             LoadTodayStats();
 

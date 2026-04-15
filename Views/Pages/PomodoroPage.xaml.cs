@@ -23,6 +23,8 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 using KiteTodo.ViewModels;
 
 namespace KiteTodo.Views.Pages;
@@ -43,6 +45,9 @@ public partial class PomodoroPage : Page
         // 监听 ViewModel 的属性变化事件，当状态改变时更新按钮的显示/隐藏
         _vm.PropertyChanged += OnVmPropertyChanged;
 
+        // 设置专注完成时的弹窗回调
+        _vm.RequestFocusNote = ShowFocusCompleteDialog;
+
         // 初始化时设置一次按钮可见性（此时应该是 Idle 状态，只显示"开始"按钮）
         UpdateButtonVisibility();
 
@@ -57,6 +62,7 @@ public partial class PomodoroPage : Page
         _vm.LoadAvailableTodos();
         _vm.CheckPendingRequest();
         UpdateBindingUI();
+        UpdateBreathingAnimation();
 
         // 同步 ComboBox 选中项
         if (_vm.BoundTodoId.HasValue)
@@ -76,6 +82,7 @@ public partial class PomodoroPage : Page
             e.PropertyName == nameof(PomodoroViewModel.StateLabel))
         {
             UpdateButtonVisibility();
+            UpdateBreathingAnimation();
         }
     }
 
@@ -154,5 +161,67 @@ public partial class PomodoroPage : Page
         BoundTaskLabel.Visibility = hasBound ? Visibility.Visible : Visibility.Collapsed;
         BoundTaskLabel.Text = hasBound ? $"当前绑定: {_vm.BoundTodoTitle}" : "";
         TimerBoundTitle.Visibility = hasBound ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // ---- 专注完成弹窗 ----
+
+    /// <summary>弹出专注完成对话框，收集备注和心情</summary>
+    private (string?, int) ShowFocusCompleteDialog()
+    {
+        var dialog = new FocusCompleteDialog
+        {
+            Owner = Window.GetWindow(this) ?? Application.Current.MainWindow
+        };
+        if (dialog.ShowDialog() == true)
+            return (dialog.FocusNote, dialog.SelectedMood);
+        return (null, 0);
+    }
+
+    // ---- 圆环呼吸动画 ----
+
+    /// <summary>根据当前状态启动或停止呼吸动画</summary>
+    private void UpdateBreathingAnimation()
+    {
+        if (_vm.State == PomodoroState.Idle || _vm.StateLabel == "已暂停")
+        {
+            StopBreathingAnimation();
+        }
+        else
+        {
+            // 专注：蓝色呼吸光晕；休息：绿色呼吸光晕
+            var glowColor = _vm.State == PomodoroState.Focusing
+                ? Color.FromRgb(74, 144, 217)
+                : Color.FromRgb(52, 160, 90);
+            StartBreathingAnimation(glowColor);
+        }
+    }
+
+    /// <summary>启动圆环边框的呼吸发光动画</summary>
+    private void StartBreathingAnimation(Color glowColor)
+    {
+        StopBreathingAnimation();
+
+        var baseColor = (Color)ColorConverter.ConvertFromString("#DDDDDD");
+        var animation = new ColorAnimation
+        {
+            From = baseColor,
+            To = glowColor,
+            Duration = TimeSpan.FromSeconds(2.5),
+            AutoReverse = true,
+            RepeatBehavior = RepeatBehavior.Forever,
+            EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+        };
+
+        var brush = new SolidColorBrush(baseColor);
+        TimerRing.BorderBrush = brush;
+        brush.BeginAnimation(SolidColorBrush.ColorProperty, animation);
+    }
+
+    /// <summary>停止呼吸动画，恢复默认边框颜色</summary>
+    private void StopBreathingAnimation()
+    {
+        if (TimerRing.BorderBrush is SolidColorBrush brush)
+            brush.BeginAnimation(SolidColorBrush.ColorProperty, null);
+        TimerRing.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#DDDDDD"));
     }
 }

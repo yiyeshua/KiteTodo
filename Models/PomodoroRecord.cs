@@ -24,4 +24,10 @@ public class PomodoroRecord
 
     /// <summary>是否完整完成（中途取消为 false）</summary>
     public bool IsCompleted { get; set; }
+
+    /// <summary>专注备注（一句话记录这次产出了什么）</summary>
+    public string? Note { get; set; }
+
+    /// <summary>心情打卡（0=未选, 1=高效, 2=焦虑, 3=疲惫, 4=轻松）</summary>
+    public int Mood { get; set; }
 }
