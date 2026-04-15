@@ -9,6 +9,7 @@
 // ============================================================================
 
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -89,6 +90,10 @@ public partial class PomodoroViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<TodoItem> _availableTodos = new();
 
+    /// <summary>今日专注记录列表（供界面展示）</summary>
+    [ObservableProperty]
+    private ObservableCollection<PomodoroRecordDisplay> _todayRecords = new();
+
     /// <summary>专注完成时请求备注和心情的回调（由 PomodoroPage 设置）</summary>
     public Func<(string? note, int mood)>? RequestFocusNote { get; set; }
 
@@ -111,15 +116,34 @@ public partial class PomodoroViewModel : ObservableObject
         LoadTodayStats();
     }
 
-    /// <summary>统计今日已完成的番茄钟数量</summary>
+    /// <summary>统计今日已完成的番茄钟数量，并加载记录列表</summary>
     private void LoadTodayStats()
     {
         var today = DateTime.Today;
         var tomorrow = today.AddDays(1);
-        TodayPomodoros = _db.Pomodoros
+        var records = _db.Pomodoros
             .Find(x => x.StartTime >= today && x.StartTime < tomorrow && x.IsCompleted)
-            .Count();
+            .OrderByDescending(x => x.StartTime)
+            .ToList();
+        TodayPomodoros = records.Count;
+        TodayRecords = new ObservableCollection<PomodoroRecordDisplay>(
+            records.Select(r => new PomodoroRecordDisplay
+            {
+                Time = r.StartTime.ToString("HH:mm"),
+                Duration = $"{r.DurationMinutes}分钟",
+                Note = r.Note ?? "",
+                MoodEmoji = MoodToEmoji(r.Mood)
+            }));
     }
+
+    private static string MoodToEmoji(int mood) => mood switch
+    {
+        1 => "😊",
+        2 => "😰",
+        3 => "😴",
+        4 => "😌",
+        _ => ""
+    };
 
     /// <summary>开始专注</summary>
     [RelayCommand]
@@ -312,4 +336,13 @@ public partial class PomodoroViewModel : ObservableObject
             FocusRequest.Clear();
         }
     }
+}
+
+/// <summary>今日专注记录的显示模型</summary>
+public class PomodoroRecordDisplay
+{
+    public string Time { get; set; } = "";
+    public string Duration { get; set; } = "";
+    public string Note { get; set; } = "";
+    public string MoodEmoji { get; set; } = "";
 }

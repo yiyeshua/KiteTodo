@@ -5,7 +5,14 @@
       Title="专注计时">
 
     <Grid Margin="24,16">
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="400">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 左侧：计时器区域 -->
+        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="400" Margin="0,0,16,0">
 
             <!-- Task Binding Selector -->
             <ui:Card Padding="12" Margin="0,0,0,16">
@@ -68,5 +75,37 @@
                 </StackPanel>
             </ui:Card>
         </StackPanel>
+        </ScrollViewer>
+
+        <!-- 右侧：今日专注列表 -->
+        <DockPanel Grid.Column="1" Margin="16,0,0,0">
+            <TextBlock DockPanel.Dock="Top" Text="今日专注列表" FontSize="16" FontWeight="SemiBold"
+                       HorizontalAlignment="Center" Margin="0,0,0,16"/>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding TodayRecords}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <ui:Card Padding="12" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <DockPanel>
+                                        <TextBlock Text="{Binding MoodEmoji}" FontSize="18"
+                                                   DockPanel.Dock="Right" VerticalAlignment="Center"/>
+                                        <StackPanel>
+                                            <TextBlock FontSize="13" Opacity="0.7">
+                                                <Run Text="{Binding Time}"/>
+                                                <Run Text="  "/>
+                                                <Run Text="{Binding Duration}"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding Note}" FontSize="13" Opacity="0.8"
+                                               TextWrapping="Wrap" Margin="0,6,0,0"/>
+                                </StackPanel>
+                            </ui:Card>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </DockPanel>
     </Grid>
 </Page>
