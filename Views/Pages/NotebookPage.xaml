@@ -62,21 +62,10 @@
                                                   Click="OnDeleteNote"/>
                                     </ContextMenu>
                                 </Border.ContextMenu>
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-                                    <TextBlock Grid.Row="0" Text="{Binding Title}"
-                                               FontSize="13" FontWeight="SemiBold"
-                                               TextTrimming="CharacterEllipsis"
-                                               Foreground="{DynamicResource CustomFg}"/>
-                                    <TextBlock Grid.Row="1" Text="{Binding Content}"
-                                               FontSize="11" Opacity="0.5"
-                                               TextTrimming="CharacterEllipsis"
-                                               Foreground="{DynamicResource CustomFgSecondary}"
-                                               Margin="0,2,0,0"/>
-                                </Grid>
+                                <TextBlock Text="{Binding Title}"
+                                           FontSize="13" FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource CustomFg}"/>
                             </Border>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
