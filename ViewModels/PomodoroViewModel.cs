@@ -38,6 +38,9 @@ public partial class PomodoroViewModel : ObservableObject
     private readonly DatabaseService _db = DatabaseService.Instance;
     private readonly TodoService _todoService = new();
 
+    /// <summary>全局单例，供 App.xaml.cs 和 PomodoroPage 共用</summary>
+    public static PomodoroViewModel Instance { get; } = new();
+
     /// <summary>倒计时定时器（每 200ms 更新一次显示）</summary>
     private DispatcherTimer? _timer;
 
@@ -94,6 +97,17 @@ public partial class PomodoroViewModel : ObservableObject
         LoadTodayStats();
     }
 
+    /// <summary>空闲时从数据库重新加载设置并刷新显示（页面重新可见时调用）</summary>
+    public void RefreshIdleDisplay()
+    {
+        if (State != PomodoroState.Idle) return;
+        var settings = _db.GetSettings();
+        RemainingTime = TimeSpan.FromMinutes(settings.PomodoroDuration);
+        Progress = 0;
+        UpdateTimerDisplay();
+        LoadTodayStats();
+    }
+
     /// <summary>统计今日已完成的番茄钟数量</summary>
     private void LoadTodayStats()
     {
@@ -132,6 +146,16 @@ public partial class PomodoroViewModel : ObservableObject
         _timerStartTime = DateTime.Now - (_targetDuration - RemainingTime);
         _timer?.Start();
         StateLabel = State == PomodoroState.Focusing ? "专注中..." : "休息中";
+    }
+
+    /// <summary>暂停/恢复切换（供浮标点击调用）</summary>
+    public void TogglePause()
+    {
+        if (State == PomodoroState.Idle) return;
+        if (StateLabel == "已暂停")
+            ResumeCommand.Execute(null);
+        else
+            PauseCommand.Execute(null);
     }
 
     /// <summary>取消当前番茄钟，恢复到空闲状态</summary>

@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
@@ -11,21 +12,23 @@ public partial class FloatingEntryWindow : Window
 {
     private readonly Action _openMainWindow;
     private readonly Action _hideEntry;
-    private readonly Action<string, DateTime> _quickAddTodo;
     private readonly Action<double, double> _savePosition;
 
     private bool _wasDragged;
-    private DateTime _targetDate = DateTime.Today;
 
     // 自动贴边
     private readonly DispatcherTimer _autoDockTimer;
     private const double DockMargin = 5;         // 贴边后距屏幕边缘的间距
     private const double AutoDockSeconds = 30;    // 空闲多少秒后自动贴边
 
+    // 番茄钟状态（由外部推送）
+    private bool _isPomodoroActive;       // 是否正在计时（包括暂停）
+    private bool _isPomodoroPaused;       // 是否已暂停
+    private Action? _onPomodoroTogglePause; // 暂停/恢复回调
+
     public FloatingEntryWindow(
         Action openMainWindow,
         Action hideEntry,
-        Action<string, DateTime> quickAddTodo,
         Action<double, double> savePosition,
         double? initialLeft,
         double? initialTop)
@@ -34,7 +37,6 @@ public partial class FloatingEntryWindow : Window
 
         _openMainWindow = openMainWindow;
         _hideEntry = hideEntry;
-        _quickAddTodo = quickAddTodo;
         _savePosition = savePosition;
 
         if (initialLeft.HasValue && initialTop.HasValue
@@ -55,8 +57,7 @@ public partial class FloatingEntryWindow : Window
         _autoDockTimer.Tick += (_, _) =>
         {
             _autoDockTimer.Stop();
-            if (MiniPanel.Visibility != Visibility.Visible) // 输入面板展开时不贴边
-                AnimateDockToEdge();
+            AnimateDockToEdge();
         };
         _autoDockTimer.Start();
     }
@@ -129,35 +130,62 @@ public partial class FloatingEntryWindow : Window
         }
         else
         {
-            // 没有发生拖拽 → 视为单击 → 切换面板
-            ToggleMiniPanel();
+            // 没有发生拖拽 → 视为单击
+            if (_isPomodoroActive)
+            {
+                // 计时中：单击暂停/恢复
+                _onPomodoroTogglePause?.Invoke();
+            }
+            // 空闲时单击不做任何操作（右键菜单仍可用）
         }
     }
 
-    // ===== 面板展开/收起 =====
+    // ===== 番茄钟状态更新（由 App.xaml.cs 调用） =====
 
-    private void ToggleMiniPanel()
+    /// <summary>设置暂停/恢复回调</summary>
+    public void SetPomodoroToggleAction(Action togglePause)
     {
-        if (MiniPanel.Visibility == Visibility.Visible)
-            CollapseMiniPanel();
+        _onPomodoroTogglePause = togglePause;
+    }
+
+    /// <summary>更新浮标的番茄钟显示状态</summary>
+    public void UpdatePomodoroDisplay(bool isActive, bool isPaused, bool isFocusing, int remainingMinutes)
+    {
+        _isPomodoroActive = isActive;
+        _isPomodoroPaused = isPaused;
+
+        var border = BubbleThumb.Template.FindName("BubbleBorder", BubbleThumb) as System.Windows.Controls.Border;
+        var text = BubbleThumb.Template.FindName("BubbleText", BubbleThumb) as System.Windows.Controls.TextBlock;
+        if (border == null || text == null) return;
+
+        if (!isActive)
+        {
+            // 空闲：恢复默认外观
+            border.Background = new SolidColorBrush(Color.FromRgb(0, 120, 212)); // #0078D4
+            text.Text = "K";
+            text.FontSize = 26;
+        }
+        else if (isPaused)
+        {
+            // 已暂停：橙色 + 显示分钟数
+            border.Background = new SolidColorBrush(Color.FromRgb(249, 115, 22)); // 橙色
+            text.Text = remainingMinutes.ToString();
+            text.FontSize = remainingMinutes >= 100 ? 16 : 22;
+        }
+        else if (isFocusing)
+        {
+            // 专注中：红色 + 显示分钟数
+            border.Background = new SolidColorBrush(Color.FromRgb(220, 50, 50)); // 红色
+            text.Text = remainingMinutes.ToString();
+            text.FontSize = remainingMinutes >= 100 ? 16 : 22;
+        }
         else
-            ExpandMiniPanel();
-    }
-
-    private void ExpandMiniPanel()
-    {
-        MiniPanel.Visibility = Visibility.Visible;
-        _targetDate = DateTime.Today;
-        DateLabel.Text = "📅 今天";
-        InputBox.Text = "";
-        Activate();
-        Dispatcher.BeginInvoke(() => InputBox.Focus(), System.Windows.Threading.DispatcherPriority.Input);
-    }
-
-    private void CollapseMiniPanel()
-    {
-        MiniPanel.Visibility = Visibility.Collapsed;
-        ResetAutoDockTimer();
+        {
+            // 休息中：绿色 + 显示分钟数
+            border.Background = new SolidColorBrush(Color.FromRgb(34, 160, 90)); // 绿色
+            text.Text = remainingMinutes.ToString();
+            text.FontSize = remainingMinutes >= 100 ? 16 : 22;
+        }
     }
 
     // ===== 右键菜单事件 =====
@@ -173,56 +201,5 @@ public partial class FloatingEntryWindow : Window
     private void OnHideEntry(object sender, RoutedEventArgs e)
     {
         _hideEntry();
-    }
-
-
-
-    // ===== 输入面板操作 =====
-
-    private void OnSetToday(object sender, RoutedEventArgs e)
-    {
-        _targetDate = DateTime.Today;
-        DateLabel.Text = "📅 今天";
-    }
-
-    private void OnSetTomorrow(object sender, RoutedEventArgs e)
-    {
-        _targetDate = DateTime.Today.AddDays(1);
-        DateLabel.Text = "📅 明天";
-    }
-
-    private void OnCollapse(object sender, RoutedEventArgs e)
-    {
-        CollapseMiniPanel();
-    }
-
-    private void OnAddClick(object sender, RoutedEventArgs e)
-    {
-        AddTodoFromInput();
-    }
-
-    private void OnInputKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter)
-        {
-            AddTodoFromInput();
-            e.Handled = true;
-        }
-        else if (e.Key == Key.Escape)
-        {
-            CollapseMiniPanel();
-            e.Handled = true;
-        }
-    }
-
-    private void AddTodoFromInput()
-    {
-        var text = InputBox.Text?.Trim();
-        if (string.IsNullOrEmpty(text)) return;
-
-        _quickAddTodo(text, _targetDate);
-        InputBox.Text = "";
-        InputBox.Focus();
-        ResetAutoDockTimer();
     }
 }

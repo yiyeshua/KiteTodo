@@ -33,7 +33,7 @@ namespace KiteTodo.Views.Pages;
 public partial class PomodoroPage : Page
 {
     /// <summary>番茄钟的 ViewModel 实例，管理计时状态和数据</summary>
-    private readonly PomodoroViewModel _vm = new();
+    private readonly PomodoroViewModel _vm = PomodoroViewModel.Instance;
 
     public PomodoroPage()
     {
@@ -53,6 +53,7 @@ public partial class PomodoroPage : Page
     /// <summary>页面加载时刷新待办列表并检查待绑定请求</summary>
     private void OnPageLoaded(object sender, RoutedEventArgs e)
     {
+        _vm.RefreshIdleDisplay();
         _vm.LoadAvailableTodos();
         _vm.CheckPendingRequest();
         UpdateBindingUI();

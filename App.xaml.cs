@@ -18,6 +18,7 @@ using H.NotifyIcon;
 using H.NotifyIcon.Core;
 using KiteTodo.Models;
 using KiteTodo.Services;
+using KiteTodo.ViewModels;
 using KiteTodo.Views;
 using Wpf.Ui.Appearance;
 
@@ -37,7 +38,7 @@ public partial class App : Application
     private TrayIconWithContextMenu? _trayIcon;
     private FloatingEntryWindow? _floatingEntryWindow;
     private MainWindow? _mainWindow;
-    private readonly TodoService _todoService = new();
+
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -55,6 +56,9 @@ public partial class App : Application
 
         // Setup tray icon
         SetupTrayIcon();
+
+        // 监听番茄钟状态变化，推送给浮标
+        PomodoroViewModel.Instance.PropertyChanged += OnPomodoroPropertyChanged;
 
         // 恢复浮标显示状态
         if (settings.ShowMiniWindow)
@@ -162,7 +166,6 @@ public partial class App : Application
         _floatingEntryWindow = new FloatingEntryWindow(
             openMainWindow: ShowMainWindow,
             hideEntry: HideFloatingEntry,
-            quickAddTodo: AddQuickTodo,
             savePosition: SaveFloatingPosition,
             initialLeft: left,
             initialTop: top);
@@ -170,8 +173,35 @@ public partial class App : Application
         _floatingEntryWindow.Closed += (_, _) => _floatingEntryWindow = null;
         _floatingEntryWindow.Show();
 
+        // 设置番茄钟暂停/恢复回调，并同步当前状态
+        _floatingEntryWindow.SetPomodoroToggleAction(PomodoroViewModel.Instance.TogglePause);
+        SyncPomodoroToFloating();
+
         settings.ShowMiniWindow = true;
         DatabaseService.Instance.SaveSettings(settings);
+    }
+
+    /// <summary>番茄钟属性变化时推送状态给浮标</summary>
+    private void OnPomodoroPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(PomodoroViewModel.State)
+            or nameof(PomodoroViewModel.StateLabel)
+            or nameof(PomodoroViewModel.RemainingTime))
+        {
+            Dispatcher.BeginInvoke(SyncPomodoroToFloating);
+        }
+    }
+
+    /// <summary>将番茄钟当前状态同步到浮标显示</summary>
+    private void SyncPomodoroToFloating()
+    {
+        if (_floatingEntryWindow == null) return;
+        var vm = PomodoroViewModel.Instance;
+        bool isActive = vm.State != PomodoroState.Idle;
+        bool isPaused = vm.StateLabel == "已暂停";
+        bool isFocusing = vm.State == PomodoroState.Focusing;
+        int remainingMin = (int)Math.Ceiling(vm.RemainingTime.TotalMinutes);
+        _floatingEntryWindow.UpdatePomodoroDisplay(isActive, isPaused, isFocusing, remainingMin);
     }
 
     private void HideFloatingEntry()
@@ -190,16 +220,6 @@ public partial class App : Application
             HideFloatingEntry();
         else
             ShowFloatingEntry();
-    }
-
-    private void AddQuickTodo(string title, DateTime date)
-    {
-        _todoService.Add(new TodoItem
-        {
-            Title = title,
-            ScheduledDate = date,
-            Priority = 1
-        });
     }
 
     private void SaveFloatingPosition(double left, double top)

@@ -18,7 +18,7 @@
                             <ColumnDefinition Width="130"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="专注时长（分钟）" VerticalAlignment="Center"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding PomodoroDuration, Mode=TwoWay}" Minimum="1" Maximum="120" SpinButtonPlacementMode="Compact"/>
+                        <ui:NumberBox Grid.Column="1" Value="{Binding PomodoroDuration, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" Maximum="120" SpinButtonPlacementMode="Compact"/>
                     </Grid>
                     <Grid Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
@@ -26,7 +26,7 @@
                             <ColumnDefinition Width="130"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="短休息（分钟）" VerticalAlignment="Center"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding ShortBreakDuration, Mode=TwoWay}" Minimum="1" Maximum="30" SpinButtonPlacementMode="Compact"/>
+                        <ui:NumberBox Grid.Column="1" Value="{Binding ShortBreakDuration, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" Maximum="30" SpinButtonPlacementMode="Compact"/>
                     </Grid>
                     <Grid Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
@@ -34,7 +34,7 @@
                             <ColumnDefinition Width="130"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="长休息（分钟）" VerticalAlignment="Center"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding LongBreakDuration, Mode=TwoWay}" Minimum="1" Maximum="60" SpinButtonPlacementMode="Compact"/>
+                        <ui:NumberBox Grid.Column="1" Value="{Binding LongBreakDuration, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" Maximum="60" SpinButtonPlacementMode="Compact"/>
                     </Grid>
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -42,7 +42,7 @@
                             <ColumnDefinition Width="130"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="长休息间隔（轮次）" VerticalAlignment="Center"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding LongBreakInterval, Mode=TwoWay}" Minimum="1" Maximum="10" SpinButtonPlacementMode="Compact"/>
+                        <ui:NumberBox Grid.Column="1" Value="{Binding LongBreakInterval, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" Maximum="10" SpinButtonPlacementMode="Compact"/>
                     </Grid>
                 </StackPanel>
             </ui:Card>
