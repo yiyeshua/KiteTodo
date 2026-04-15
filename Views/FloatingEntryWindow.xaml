@@ -1,0 +1,87 @@
+<Window x:Class="KiteTodo.Views.FloatingEntryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        SizeToContent="WidthAndHeight"
+        ResizeMode="NoResize">
+
+    <StackPanel>
+        <!-- 可拖动的浮标气泡（使用 Thumb 控件，原生支持拖拽） -->
+        <Thumb x:Name="BubbleThumb"
+               DragStarted="Thumb_DragStarted"
+               DragDelta="Thumb_DragDelta"
+               DragCompleted="Thumb_DragCompleted">
+            <Thumb.Template>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Width="56" Height="56"
+                            CornerRadius="28"
+                            Background="#0078D4"
+                            Cursor="Hand">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="10" ShadowDepth="2"
+                                              Opacity="0.3" Color="Black"/>
+                        </Border.Effect>
+                        <TextBlock Text="K"
+                                   FontSize="26" FontWeight="Bold"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   IsHitTestVisible="False"/>
+                    </Border>
+                </ControlTemplate>
+            </Thumb.Template>
+            <Thumb.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="显示主窗口" Click="OnShowMainWindow"/>
+                    <Separator/>
+                    <MenuItem Header="隐藏浮标" Click="OnHideEntry"/>
+                </ContextMenu>
+            </Thumb.ContextMenu>
+        </Thumb>
+
+        <!-- 可展开的快速输入面板 -->
+        <Border x:Name="MiniPanel"
+                Visibility="Collapsed"
+                Background="White"
+                CornerRadius="10"
+                Padding="12"
+                Margin="0,4,0,0"
+                MinWidth="260">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="10" ShadowDepth="2"
+                                  Opacity="0.15" Color="Black"/>
+            </Border.Effect>
+            <StackPanel>
+                <TextBlock x:Name="DateLabel" Text="📅 今天"
+                           FontSize="12" Foreground="#666" Margin="0,0,0,6"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="InputBox"
+                             VerticalContentAlignment="Center"
+                             FontSize="13" Padding="6,5"
+                             KeyDown="OnInputKeyDown"/>
+                    <Button Grid.Column="1" Content="添加"
+                            Margin="6,0,0,0"
+                            Click="OnAddClick"
+                            Padding="10,5" FontSize="12"/>
+                </Grid>
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <Button Content="今天" Click="OnSetToday"
+                            Padding="8,3" Margin="0,0,4,0" FontSize="11"/>
+                    <Button Content="明天" Click="OnSetTomorrow"
+                            Padding="8,3" Margin="0,0,4,0" FontSize="11"/>
+                    <Button Content="收起" Click="OnCollapse"
+                            Padding="8,3" HorizontalAlignment="Right" FontSize="11"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</Window>

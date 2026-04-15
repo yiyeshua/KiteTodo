@@ -31,8 +31,8 @@ public class TodoService
             query = query.Where(x => x.Category == tag);
         return query
             .OrderBy(x => x.IsCompleted)       // 未完成的排前面
-            .ThenBy(x => x.SortOrder)           // 按手动排序权重
             .ThenByDescending(x => x.Priority)  // 高优先级排前面
+            .ThenBy(x => x.SortOrder)           // 按手动排序权重
             .ToList();
     }
 

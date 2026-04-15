@@ -10,18 +10,34 @@
 // ============================================================================
 
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Media;
 using H.NotifyIcon;
 using H.NotifyIcon.Core;
+using KiteTodo.Models;
 using KiteTodo.Services;
+using KiteTodo.Views;
 using Wpf.Ui.Appearance;
 
 namespace KiteTodo;
 
 public partial class App : Application
 {
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    private const int SW_SHOW = 5;
+    private const int SW_RESTORE = 9;
+
     private TrayIconWithContextMenu? _trayIcon;
+    private FloatingEntryWindow? _floatingEntryWindow;
+    private MainWindow? _mainWindow;
+    private readonly TodoService _todoService = new();
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -39,6 +55,12 @@ public partial class App : Application
 
         // Setup tray icon
         SetupTrayIcon();
+
+        // 恢复浮标显示状态
+        if (settings.ShowMiniWindow)
+        {
+            ShowFloatingEntry();
+        }
     }
 
     private void SetupTrayIcon()
@@ -55,6 +77,8 @@ public partial class App : Application
             {
                 new PopupMenuItem("显示主窗口", (_, _) =>
                     Dispatcher.BeginInvoke(ShowMainWindow)),
+                new PopupMenuItem("显示/隐藏浮标", (_, _) =>
+                    Dispatcher.BeginInvoke(ToggleFloatingEntry)),
                 new PopupMenuSeparator(),
                 new PopupMenuItem("退出", (_, _) =>
                     Dispatcher.BeginInvoke(new Action(ExitApp)))
@@ -88,18 +112,102 @@ public partial class App : Application
         return Icon.FromHandle(bitmap.GetHicon());
     }
 
+    private MainWindow EnsureMainWindow()
+    {
+        if (_mainWindow == null || !_mainWindow.IsLoaded)
+        {
+            // StartupUri 创建的主窗口会赋给 Application.MainWindow
+            _mainWindow = MainWindow as MainWindow;
+        }
+        if (_mainWindow == null)
+        {
+            _mainWindow = new MainWindow();
+        }
+        return _mainWindow;
+    }
+
     public void ShowMainWindow()
     {
-        if (MainWindow == null)
+        var win = EnsureMainWindow();
+
+        win.Show();
+        win.WindowState = WindowState.Normal;
+        win.Activate();
+
+        // 使用 Win32 API 可靠地将窗口带到前台
+        var hwnd = new WindowInteropHelper(win).Handle;
+        if (hwnd != IntPtr.Zero)
         {
-            MainWindow = new MainWindow();
+            SetForegroundWindow(hwnd);
         }
-        MainWindow.Show();
-        MainWindow.WindowState = WindowState.Normal;
-        MainWindow.Activate();
-        MainWindow.Topmost = true;
-        MainWindow.Topmost = false;
-        MainWindow.Focus();
+
+        win.Topmost = true;
+        win.Topmost = false;
+    }
+
+    // ===== 浮标窗口管理 =====
+
+    private void ShowFloatingEntry()
+    {
+        if (_floatingEntryWindow != null)
+        {
+            _floatingEntryWindow.Show();
+            return;
+        }
+
+        var settings = DatabaseService.Instance.GetSettings();
+        double? left = settings.MiniWindowX > 0 ? settings.MiniWindowX : null;
+        double? top = settings.MiniWindowY > 0 ? settings.MiniWindowY : null;
+
+        _floatingEntryWindow = new FloatingEntryWindow(
+            openMainWindow: ShowMainWindow,
+            hideEntry: HideFloatingEntry,
+            quickAddTodo: AddQuickTodo,
+            savePosition: SaveFloatingPosition,
+            initialLeft: left,
+            initialTop: top);
+
+        _floatingEntryWindow.Closed += (_, _) => _floatingEntryWindow = null;
+        _floatingEntryWindow.Show();
+
+        settings.ShowMiniWindow = true;
+        DatabaseService.Instance.SaveSettings(settings);
+    }
+
+    private void HideFloatingEntry()
+    {
+        _floatingEntryWindow?.Close();
+        _floatingEntryWindow = null;
+
+        var settings = DatabaseService.Instance.GetSettings();
+        settings.ShowMiniWindow = false;
+        DatabaseService.Instance.SaveSettings(settings);
+    }
+
+    private void ToggleFloatingEntry()
+    {
+        if (_floatingEntryWindow != null)
+            HideFloatingEntry();
+        else
+            ShowFloatingEntry();
+    }
+
+    private void AddQuickTodo(string title, DateTime date)
+    {
+        _todoService.Add(new TodoItem
+        {
+            Title = title,
+            ScheduledDate = date,
+            Priority = 1
+        });
+    }
+
+    private void SaveFloatingPosition(double left, double top)
+    {
+        var settings = DatabaseService.Instance.GetSettings();
+        settings.MiniWindowX = left;
+        settings.MiniWindowY = top;
+        DatabaseService.Instance.SaveSettings(settings);
     }
 
     public void ApplyTheme(string theme)
@@ -151,9 +259,10 @@ public partial class App : Application
             isDark ? ColorFromHex("#2D2D2D") : Colors.White);
 
         // 5. Force background on existing main window
-        if (MainWindow != null)
+        var mw = MainWindow ?? _mainWindow;
+        if (mw != null)
         {
-            MainWindow.Background = new SolidColorBrush(
+            mw.Background = new SolidColorBrush(
                 isDark ? ColorFromHex("#1E1E1E") : ColorFromHex("#F3F3F3"));
         }
     }

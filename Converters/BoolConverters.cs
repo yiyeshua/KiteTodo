@@ -72,6 +72,26 @@ public class PriorityToColorConverter : IValueConverter
 }
 
 /// <summary>
+/// 优先级 → 卡片背景色转换器
+/// 高优先级淡红色，中优先级淡橙色，其他透明
+/// </summary>
+public class PriorityToBgConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is int priority ? priority switch
+        {
+            3 => new SolidColorBrush(Color.FromArgb(20, 239, 68, 68)),   // 淡红 - 高优先级
+            2 => new SolidColorBrush(Color.FromArgb(15, 249, 115, 22)),  // 淡橙 - 中优先级
+            _ => new SolidColorBrush(Colors.Transparent)
+        } : new SolidColorBrush(Colors.Transparent);
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>
 /// bool → 透明度转换器
 /// true（已完成）→ 0.5 半透明，false → 1.0 完全不透明
 /// </summary>

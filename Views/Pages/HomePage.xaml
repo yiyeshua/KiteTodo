@@ -9,6 +9,7 @@
     <Page.Resources>
         <converters:BoolToStrikethroughConverter x:Key="StrikethroughConverter"/>
         <converters:PriorityToColorConverter x:Key="PriorityColorConverter"/>
+        <converters:PriorityToBgConverter x:Key="PriorityBgConverter"/>
         <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter"/>
         <converters:NullToCollapsedConverter x:Key="NullToCollapsedConverter"/>
         <converters:ZeroToVisibleConverter x:Key="ZeroToVisibleConverter"/>
@@ -220,7 +221,8 @@
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <ui:Card Padding="12,10" ContextMenuOpening="OnTodoContextMenuOpening"
-                             MouseDoubleClick="OnTodoDoubleClick">
+                             MouseDoubleClick="OnTodoDoubleClick"
+                             Background="{Binding Priority, Converter={StaticResource PriorityBgConverter}}">
                         <ui:Card.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="移动到"/>
