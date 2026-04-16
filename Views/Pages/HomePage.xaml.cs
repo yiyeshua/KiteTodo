@@ -130,6 +130,9 @@ public partial class HomePage : Page
         // Set progress combo (index 0=0%, 1=10%, ..., 10=100%)
         EditProgress.SelectedIndex = Math.Clamp(item.Progress, 0, 100) / 10;
 
+        // Set verification checkbox
+        EditNeedsVerification.IsChecked = item.NeedsVerification;
+
         // Set reminder time
         if (item.ReminderTime.HasValue)
         {
@@ -176,6 +179,9 @@ public partial class HomePage : Page
             // 进度从100%降低，自动取消完成
             _editingItem.CompletedAt = null;
         }
+
+        // 待验证状态
+        _editingItem.NeedsVerification = EditNeedsVerification.IsChecked == true;
 
         // Parse reminder time
         if (EditReminderDate.SelectedDate.HasValue &&
@@ -323,6 +329,12 @@ public partial class HomePage : Page
             };
             moveToItem.Items.Add(menuItem);
         }
+
+        // 更新"待验证"菜单项文本
+        if (contextMenu.Items[3] is MenuItem verifyItem)
+        {
+            verifyItem.Header = todoItem.NeedsVerification ? "取消待验证" : "标记待验证";
+        }
     }
 
     // ---- 右键菜单：开始专注 ----
@@ -344,6 +356,17 @@ public partial class HomePage : Page
             {
                 mainWindow.NavigateTo(typeof(PomodoroPage));
             }
+        }
+    }
+
+    /// <summary>右键切换待验证状态</summary>
+    private void OnToggleVerification(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem mi && mi.Parent is ContextMenu cm
+            && cm.PlacementTarget is FrameworkElement el
+            && el.DataContext is TodoItem item)
+        {
+            _vm.ToggleVerificationCommand.Execute(item);
         }
     }
 }

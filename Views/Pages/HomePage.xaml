@@ -17,6 +17,8 @@
         <converters:PriorityToTextConverter x:Key="PriorityTextConverter"/>
         <converters:ProgressToTextConverter x:Key="ProgressTextConverter"/>
         <converters:EmptyStringToCollapsedConverter x:Key="EmptyStringToCollapsedConverter"/>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+        <converters:ZeroToCollapsedConverter x:Key="ZeroToCollapsedConverter"/>
     </Page.Resources>
 
     <Grid Margin="24,16">
@@ -50,6 +52,14 @@
                            Text="{Binding CompletedCount, StringFormat='已完成: {0}'}" FontSize="14"/>
                 <TextBlock VerticalAlignment="Center" Margin="4,0,0,0" Opacity="0.6"
                            Text="{Binding TotalCount, StringFormat='/ {0}'}" FontSize="14"/>
+                <Border CornerRadius="8" Padding="6,2" Margin="12,0,0,0"
+                        Background="#20FF8C00" VerticalAlignment="Center"
+                        Visibility="{Binding VerificationCount, Converter={StaticResource ZeroToCollapsedConverter}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="待验证: " FontSize="12" Foreground="#FF8C00"/>
+                        <TextBlock Text="{Binding VerificationCount}" FontSize="12" Foreground="#FF8C00" FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </DockPanel>
 
@@ -227,6 +237,8 @@
                             <ContextMenu>
                                 <MenuItem Header="移动到"/>
                                 <MenuItem Header="开始专注" Click="OnStartFocus"/>
+                                <Separator/>
+                                <MenuItem Header="标记待验证" Click="OnToggleVerification"/>
                             </ContextMenu>
                         </ui:Card.ContextMenu>
                         <ui:Card.ToolTip>
@@ -255,6 +267,11 @@
                                         <TextBlock Text="&#x1F4CA; 进度: " FontSize="12" Opacity="0.6"/>
                                         <TextBlock Text="{Binding Progress, Converter={StaticResource ProgressTextConverter}}"
                                                    FontSize="12"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,3"
+                                                Visibility="{Binding NeedsVerification, Converter={StaticResource BoolToVisConverter}}">
+                                        <TextBlock Text="⚠️ 状态: " FontSize="12" Opacity="0.6"/>
+                                        <TextBlock Text="待验证" FontSize="12" Foreground="#FF8C00" FontWeight="SemiBold"/>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#x1F4C5; 计划日期: " FontSize="12" Opacity="0.6"/>
@@ -293,6 +310,11 @@
                                             Background="#200078D4" VerticalAlignment="Center"
                                             Visibility="{Binding Category, Converter={StaticResource EmptyStringToCollapsedConverter}}">
                                         <TextBlock Text="{Binding Category}" FontSize="10" Foreground="#0078D4"/>
+                                    </Border>
+                                    <Border CornerRadius="8" Padding="6,1" Margin="6,0,0,0"
+                                            Background="#20FF8C00" VerticalAlignment="Center"
+                                            Visibility="{Binding NeedsVerification, Converter={StaticResource BoolToVisConverter}}">
+                                        <TextBlock Text="待验证" FontSize="10" Foreground="#FF8C00" FontWeight="SemiBold"/>
                                     </Border>
                                 </StackPanel>
                                 <Grid Margin="0,3,0,0"
@@ -361,66 +383,80 @@
         <!-- Edit Dialog Overlay -->
         <Border x:Name="EditOverlay" Grid.RowSpan="5" Visibility="Collapsed"
                 Background="#80000000">
-            <Border Background="{DynamicResource CustomOverlayBg}" CornerRadius="8" Padding="24" MaxWidth="480"
+            <Border Background="{DynamicResource CustomOverlayBg}" CornerRadius="8" Padding="24" MaxWidth="680"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
-                    MinWidth="400" MaxHeight="600">
+                    MinWidth="600">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="20" Opacity="0.3" ShadowDepth="4"/>
                 </Border.Effect>
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
                     <TextBlock Text="编辑待办" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,16"/>
 
-                    <TextBlock Text="标题" FontSize="13" Margin="0,0,0,4"/>
-                    <ui:TextBox x:Name="EditTitle" Margin="0,0,0,12"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="详细内容" FontSize="13" Margin="0,0,0,4"/>
-                    <ui:TextBox x:Name="EditDescription" Margin="0,0,0,12"
-                                MinHeight="80" AcceptsReturn="True" TextWrapping="Wrap"
-                                PlaceholderText="输入详细描述（可选）"/>
+                        <!-- Left: Title + Description -->
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="标题" FontSize="13" Margin="0,0,0,4"/>
+                            <ui:TextBox x:Name="EditTitle" Margin="0,0,0,10"/>
 
-                    <TextBlock Text="优先级" FontSize="13" Margin="0,0,0,4"/>
-                    <ComboBox x:Name="EditPriority" Margin="0,0,0,12" Width="200" HorizontalAlignment="Left">
-                        <ComboBoxItem Content="无" Tag="0"/>
-                        <ComboBoxItem Content="低" Tag="1"/>
-                        <ComboBoxItem Content="中" Tag="2"/>
-                        <ComboBoxItem Content="高" Tag="3"/>
-                    </ComboBox>
+                            <TextBlock Text="详细内容" FontSize="13" Margin="0,0,0,4"/>
+                            <ui:TextBox x:Name="EditDescription" Margin="0,0,0,0"
+                                        MinHeight="160" AcceptsReturn="True" TextWrapping="Wrap"
+                                        PlaceholderText="输入详细描述（可选）"/>
+                        </StackPanel>
 
-                    <TextBlock Text="标签" FontSize="13" Margin="0,0,0,4"/>
-                    <ComboBox x:Name="EditCategory" Margin="0,0,0,12" Width="200" HorizontalAlignment="Left"
-                              IsEditable="True"/>
+                        <!-- Right: Other fields -->
+                        <StackPanel Grid.Column="2" Width="200">
+                            <TextBlock Text="优先级" FontSize="13" Margin="0,0,0,4"/>
+                            <ComboBox x:Name="EditPriority" Margin="0,0,0,10">
+                                <ComboBoxItem Content="无" Tag="0"/>
+                                <ComboBoxItem Content="低" Tag="1"/>
+                                <ComboBoxItem Content="中" Tag="2"/>
+                                <ComboBoxItem Content="高" Tag="3"/>
+                            </ComboBox>
 
-                    <TextBlock Text="完成进度" FontSize="13" Margin="0,0,0,4"/>
-                    <ComboBox x:Name="EditProgress" Margin="0,0,0,12" Width="200" HorizontalAlignment="Left">
-                        <ComboBoxItem Content="0%"/>
-                        <ComboBoxItem Content="10%"/>
-                        <ComboBoxItem Content="20%"/>
-                        <ComboBoxItem Content="30%"/>
-                        <ComboBoxItem Content="40%"/>
-                        <ComboBoxItem Content="50%"/>
-                        <ComboBoxItem Content="60%"/>
-                        <ComboBoxItem Content="70%"/>
-                        <ComboBoxItem Content="80%"/>
-                        <ComboBoxItem Content="90%"/>
-                        <ComboBoxItem Content="100%"/>
-                    </ComboBox>
+                            <TextBlock Text="标签" FontSize="13" Margin="0,0,0,4"/>
+                            <ComboBox x:Name="EditCategory" Margin="0,0,0,10" IsEditable="True"/>
 
-                    <TextBlock Text="提醒时间" FontSize="13" Margin="0,0,0,4"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                        <DatePicker x:Name="EditReminderDate" Width="150" Margin="0,0,8,0"/>
-                        <ComboBox x:Name="EditReminderHour" Width="70" Margin="0,0,4,0"/>
-                        <TextBlock Text=":" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                        <ComboBox x:Name="EditReminderMinute" Width="70" Margin="0,0,8,0"/>
-                        <ui:Button Content="清除" Appearance="Secondary" Click="OnClearReminder" Padding="8,4"/>
-                    </StackPanel>
+                            <TextBlock Text="完成进度" FontSize="13" Margin="0,0,0,4"/>
+                            <ComboBox x:Name="EditProgress" Margin="0,0,0,10">
+                                <ComboBoxItem Content="0%"/>
+                                <ComboBoxItem Content="10%"/>
+                                <ComboBoxItem Content="20%"/>
+                                <ComboBoxItem Content="30%"/>
+                                <ComboBoxItem Content="40%"/>
+                                <ComboBoxItem Content="50%"/>
+                                <ComboBoxItem Content="60%"/>
+                                <ComboBoxItem Content="70%"/>
+                                <ComboBoxItem Content="80%"/>
+                                <ComboBoxItem Content="90%"/>
+                                <ComboBoxItem Content="100%"/>
+                            </ComboBox>
 
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <CheckBox x:Name="EditNeedsVerification" Content="标记为待验证" Margin="0,0,0,10"
+                                      ToolTip="功能已完成但缺少测试条件，等待验证"/>
+
+                            <TextBlock Text="提醒时间" FontSize="13" Margin="0,0,0,4"/>
+                            <DatePicker x:Name="EditReminderDate" Margin="0,0,0,6"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
+                                <ComboBox x:Name="EditReminderHour" Width="65" Margin="0,0,4,0"/>
+                                <TextBlock Text=":" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <ComboBox x:Name="EditReminderMinute" Width="65" Margin="0,0,6,0"/>
+                                <ui:Button Content="清除" Appearance="Secondary" Click="OnClearReminder" Padding="6,3" FontSize="12"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
                         <ui:Button Content="取消" Appearance="Secondary" Click="OnCancelEdit" Margin="0,0,8,0"/>
                         <ui:Button Content="保存" Appearance="Primary" Click="OnSaveEdit"/>
                     </StackPanel>
                 </StackPanel>
-                </ScrollViewer>
             </Border>
         </Border>
     </Grid>

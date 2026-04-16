@@ -152,6 +152,21 @@ public class ZeroToVisibleConverter : IValueConverter
 }
 
 /// <summary>
+/// 数量 → 非零显示转换器
+/// count > 0 → Visible, count == 0 → Collapsed
+/// </summary>
+public class ZeroToCollapsedConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is int count && count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>
 /// 完成率（0.0~1.0）→ 像素宽度转换器
 /// 用于月视图中每日进度条的宽度计算
 /// </summary>

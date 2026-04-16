@@ -76,6 +76,10 @@ public partial class HomeViewModel : ObservableObject
     [ObservableProperty]
     private int _totalCount;
 
+    /// <summary>当天待验证数</summary>
+    [ObservableProperty]
+    private int _verificationCount;
+
     /// <summary>周栏数据（周一到周日的 7 个 WeekDay）</summary>
     [ObservableProperty]
     private ObservableCollection<WeekDay> _weekDays = new();
@@ -177,6 +181,7 @@ public partial class HomeViewModel : ObservableObject
         Todos = new ObservableCollection<TodoItem>(items);
         TotalCount = items.Count;
         CompletedCount = items.Count(x => x.IsCompleted);
+        VerificationCount = items.Count(x => x.NeedsVerification);
     }
 
     /// <summary>
@@ -203,6 +208,17 @@ public partial class HomeViewModel : ObservableObject
             todo.Progress = 100;
         }
 
+        _todoService.Update(todo);
+        LoadTodos();
+    }
+
+    /// <summary>切换待验证状态</summary>
+    [RelayCommand]
+    private void ToggleVerification(TodoItem item)
+    {
+        var todo = _todoService.GetById(item.Id);
+        if (todo == null) return;
+        todo.NeedsVerification = !todo.NeedsVerification;
         _todoService.Update(todo);
         LoadTodos();
     }

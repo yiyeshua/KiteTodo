@@ -116,4 +116,13 @@ public class TodoService
     {
         return _db.Todos.FindById(id);
     }
+
+    /// <summary>获取所有标记为待验证的待办事项</summary>
+    public List<TodoItem> GetNeedsVerification()
+    {
+        return _db.Todos.Find(x => x.NeedsVerification)
+            .OrderByDescending(x => x.CompletedAt)
+            .ThenByDescending(x => x.ScheduledDate)
+            .ToList();
+    }
 }

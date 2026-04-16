@@ -47,6 +47,9 @@ public class TodoItem
     /// <summary>关联的番茄钟完成次数</summary>
     public int PomodoroCount { get; set; }
 
+    /// <summary>是否标记为待验证（功能已完成但未经验证）</summary>
+    public bool NeedsVerification { get; set; }
+
     /// <summary>是否已完成（计算属性，根据 CompletedAt 是否有值判断）</summary>
     public bool IsCompleted => CompletedAt.HasValue;
 }
