@@ -44,7 +44,13 @@ public class ExportService
                     1 => " !",     // 低优先级
                     _ => ""
                 };
-                sb.AppendLine($"- [{check}] {item.Title}{priority}");
+                var tags = new List<string>();
+                if (!string.IsNullOrEmpty(item.Category)) tags.Add($"`{item.Category}`");
+                if (item.NeedsVerification) tags.Add("⚠️待验证");
+                if (item.Progress > 0 && item.Progress < 100) tags.Add($"{item.Progress}%");
+                var tagStr = tags.Count > 0 ? " " + string.Join(" ", tags) : "";
+
+                sb.AppendLine($"- [{check}] {item.Title}{priority}{tagStr}");
                 if (!string.IsNullOrWhiteSpace(item.Description))
                 {
                     sb.AppendLine($"  > {item.Description}");
@@ -75,7 +81,12 @@ public class ExportService
             foreach (var item in group.OrderBy(x => x.SortOrder))
             {
                 var status = item.IsCompleted ? "DONE" : "TODO";
-                sb.AppendLine($"  [{status}] {item.Title}");
+                if (item.NeedsVerification) status = "VERIFY";
+                var category = !string.IsNullOrEmpty(item.Category) ? $" [{item.Category}]" : "";
+                var progress = item.Progress > 0 && item.Progress < 100 ? $" {item.Progress}%" : "";
+                sb.AppendLine($"  [{status}] {item.Title}{category}{progress}");
+                if (!string.IsNullOrWhiteSpace(item.Description))
+                    sb.AppendLine($"         {item.Description}");
             }
             sb.AppendLine();
         }

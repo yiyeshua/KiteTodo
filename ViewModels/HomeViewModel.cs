@@ -321,6 +321,7 @@ public partial class HomeViewModel : ObservableObject
         var allTodos = _todoService.GetTodosByDateRange(weekStart, weekEnd);
         var completed = allTodos.Where(t => t.IsCompleted).ToList();
         var pending = allTodos.Where(t => !t.IsCompleted).ToList();
+        var needsVerify = allTodos.Where(t => t.NeedsVerification).ToList();
 
         var sb = new StringBuilder();
         sb.AppendLine($"周报 ({weekStart:yyyy-MM-dd} ~ {weekEnd:yyyy-MM-dd})");
@@ -337,6 +338,8 @@ public partial class HomeViewModel : ObservableObject
                 foreach (var item in group.OrderBy(t => t.SortOrder))
                 {
                     sb.Append($"{idx}. {item.Title} ({dayName})");
+                    if (item.NeedsVerification)
+                        sb.Append(" [待验证]");
                     if (!string.IsNullOrWhiteSpace(item.Description))
                         sb.Append($" - {item.Description}");
                     sb.AppendLine();
@@ -361,6 +364,8 @@ public partial class HomeViewModel : ObservableObject
                 foreach (var item in group.OrderBy(t => t.SortOrder))
                 {
                     sb.Append($"{idx}. {item.Title} [{item.Progress}%] ({dayName})");
+                    if (item.NeedsVerification)
+                        sb.Append(" [待验证]");
                     if (!string.IsNullOrWhiteSpace(item.Description))
                         sb.Append($" - {item.Description}");
                     sb.AppendLine();
@@ -382,6 +387,8 @@ public partial class HomeViewModel : ObservableObject
         sb.AppendLine($"总任务: {total} | 已完成: {completed.Count} | 完成率: {rate}%");
         if (pending.Count > 0)
             sb.AppendLine($"未完成平均进度: {avgProgress}%");
+        if (needsVerify.Count > 0)
+            sb.AppendLine($"待验证: {needsVerify.Count} 项");
 
         return sb.ToString();
     }
