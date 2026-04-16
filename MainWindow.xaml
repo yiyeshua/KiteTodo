@@ -44,6 +44,11 @@
                         <ui:SymbolIcon Symbol="ArrowExportUp24"/>
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="事项池" TargetPageType="{x:Type pages:BacklogPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Archive24"/>
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="记事本" TargetPageType="{x:Type pages:NotebookPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="NoteEdit24"/>

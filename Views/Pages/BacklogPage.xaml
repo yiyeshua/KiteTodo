@@ -1,0 +1,316 @@
+<Page x:Class="KiteTodo.Views.Pages.BacklogPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:converters="clr-namespace:KiteTodo.Converters"
+      Title="事项池"
+      Language="zh-CN">
+
+    <Page.Resources>
+        <converters:PriorityToColorConverter x:Key="PriorityColorConverter"/>
+        <converters:PriorityToTextConverter x:Key="PriorityTextConverter"/>
+        <converters:NullToCollapsedConverter x:Key="NullToCollapsedConverter"/>
+        <converters:EmptyStringToCollapsedConverter x:Key="EmptyStringToCollapsedConverter"/>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+        <converters:ZeroToVisibleConverter x:Key="ZeroToVisibleConverter"/>
+    </Page.Resources>
+
+    <Grid Margin="24,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题栏 -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="事项池" FontSize="22" FontWeight="SemiBold"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource CustomFg}"/>
+            <TextBlock Text="暂时无法排期、等待他人协作、或需要后续跟进的重要事项"
+                       FontSize="12" Opacity="0.5" VerticalAlignment="Center" Margin="12,0,0,0"
+                       Foreground="{DynamicResource CustomFgSecondary}"/>
+        </DockPanel>
+
+        <!-- 筛选栏 + 统计 -->
+        <Border Grid.Row="1" CornerRadius="8" Padding="8,6" Margin="0,0,0,10"
+                Background="{DynamicResource CustomSubtleBg}"
+                BorderThickness="1" BorderBrush="{DynamicResource CustomSubtleBorder}">
+            <StackPanel Orientation="Horizontal">
+                <RadioButton x:Name="FilterAll" Content="全部" GroupName="StatusFilter"
+                             IsChecked="True" Click="OnFilterChanged"
+                             Style="{StaticResource {x:Type RadioButton}}" Margin="0,0,4,0"/>
+                <RadioButton x:Name="FilterActive" Content="活跃事项" GroupName="StatusFilter"
+                             Click="OnFilterChanged"
+                             Style="{StaticResource {x:Type RadioButton}}" Margin="0,0,4,0"/>
+                <RadioButton x:Name="FilterPending" GroupName="StatusFilter"
+                             Click="OnFilterChanged"
+                             Style="{StaticResource {x:Type RadioButton}}" Margin="0,0,4,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="待处理"/>
+                        <TextBlock Text="{Binding PendingCount, StringFormat=' ({0})'}"
+                                   Opacity="0.6" FontSize="11"/>
+                    </StackPanel>
+                </RadioButton>
+                <RadioButton x:Name="FilterWaiting" GroupName="StatusFilter"
+                             Click="OnFilterChanged"
+                             Style="{StaticResource {x:Type RadioButton}}" Margin="0,0,4,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="等待他人"/>
+                        <TextBlock Text="{Binding WaitingCount, StringFormat=' ({0})'}"
+                                   Opacity="0.6" FontSize="11"/>
+                    </StackPanel>
+                </RadioButton>
+                <RadioButton x:Name="FilterScheduled" GroupName="StatusFilter"
+                             Click="OnFilterChanged"
+                             Style="{StaticResource {x:Type RadioButton}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="已排期"/>
+                        <TextBlock Text="{Binding ScheduledCount, StringFormat=' ({0})'}"
+                                   Opacity="0.6" FontSize="11"/>
+                    </StackPanel>
+                </RadioButton>
+            </StackPanel>
+        </Border>
+
+        <!-- 快速添加 -->
+        <Border Grid.Row="2" CornerRadius="8" Padding="8" Margin="0,0,0,10"
+                Background="{DynamicResource CustomCardBg}"
+                BorderThickness="1" BorderBrush="{DynamicResource CustomSubtleBorder}">
+            <DockPanel>
+                <ui:Button DockPanel.Dock="Right" Content="添加" Appearance="Primary"
+                           Click="OnQuickAdd" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                <ui:TextBox x:Name="QuickAddBox"
+                            Text="{Binding NewTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="输入事项标题，按回车快速添加..."
+                            KeyDown="OnQuickAddKeyDown"
+                            VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+
+        <!-- 事项列表 -->
+        <Border Grid.Row="3" CornerRadius="8" Padding="0"
+                Background="Transparent">
+            <Grid>
+                <!-- 空状态 -->
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Visibility="{Binding Items.Count, Converter={StaticResource ZeroToVisibleConverter}}"
+                            IsHitTestVisible="False">
+                    <ui:SymbolIcon Symbol="Archive24" FontSize="48" Opacity="0.2"/>
+                    <TextBlock Text="暂无事项" FontSize="14" Opacity="0.3"
+                               HorizontalAlignment="Center" Margin="0,12,0,0"/>
+                </StackPanel>
+
+                <!-- 列表 -->
+                <ListBox ItemsSource="{Binding Items}" Background="Transparent"
+                         BorderThickness="0" Padding="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0,0,0,6"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="12,10" CornerRadius="8"
+                                    Background="{DynamicResource CustomCardBg}"
+                                    BorderThickness="1"
+                                    BorderBrush="{DynamicResource CustomSubtleBorder}"
+                                    MouseLeftButtonDown="OnItemMouseLeftButtonDown">
+                                <Border.ContextMenu>
+                                    <ContextMenu Opened="OnItemContextMenuOpening">
+                                        <MenuItem Header="编辑" Icon="{ui:SymbolIcon Edit24}"
+                                                  Click="OnEditItem"/>
+                                        <Separator/>
+                                        <MenuItem Header="标记待处理" Icon="{ui:SymbolIcon Circle24}"
+                                                  Click="OnMarkPending"/>
+                                        <MenuItem Header="标记等待他人" Icon="{ui:SymbolIcon Clock24}"
+                                                  Click="OnMarkWaiting"/>
+                                        <MenuItem Header="排期为待办" Icon="{ui:SymbolIcon CalendarAdd24}"
+                                                  Click="OnScheduleItem"/>
+                                        <Separator/>
+                                        <MenuItem Header="删除" Icon="{ui:SymbolIcon Delete24}"
+                                                  Click="OnDeleteItem"/>
+                                    </ContextMenu>
+                                </Border.ContextMenu>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="4"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- 优先级色条 -->
+                                    <Border Grid.Column="0" CornerRadius="2" Width="4"
+                                            Background="{Binding Priority, Converter={StaticResource PriorityColorConverter}}"
+                                            Margin="0,0,10,0"/>
+
+                                    <!-- 内容区 -->
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource CustomFg}"/>
+                                        <TextBlock Text="{Binding Description}" FontSize="12"
+                                                   TextWrapping="Wrap" MaxHeight="36"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{DynamicResource CustomFgSecondary}"
+                                                   Margin="0,2,0,0"
+                                                   Visibility="{Binding Description, Converter={StaticResource EmptyStringToCollapsedConverter}}"/>
+                                        <!-- 等待说明 -->
+                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0"
+                                                    Visibility="{Binding WaitingFor, Converter={StaticResource EmptyStringToCollapsedConverter}}">
+                                            <ui:SymbolIcon Symbol="Clock24" FontSize="12" Opacity="0.6"
+                                                           Foreground="#E67E22"/>
+                                            <TextBlock Text="{Binding WaitingFor}" FontSize="11"
+                                                       Foreground="#E67E22" Margin="4,0,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- 右侧：状态标签 + 分类 + 时间 -->
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center"
+                                                HorizontalAlignment="Right" Margin="8,0,0,0">
+                                        <!-- 状态标签 -->
+                                        <Border CornerRadius="4" Padding="6,2" HorizontalAlignment="Right"
+                                                Margin="0,0,0,4">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="#200078D4"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Status}" Value="1">
+                                                            <Setter Property="Background" Value="#20E67E22"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="2">
+                                                            <Setter Property="Background" Value="#2027AE60"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="SemiBold">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="#0078D4"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Status}" Value="1">
+                                                                <Setter Property="Foreground" Value="#E67E22"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="2">
+                                                                <Setter Property="Foreground" Value="#27AE60"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+                                        <!-- 分类标签 -->
+                                        <Border CornerRadius="4" Padding="6,1" HorizontalAlignment="Right"
+                                                Background="{DynamicResource CustomSubtleBg}" Margin="0,0,0,2"
+                                                Visibility="{Binding Category, Converter={StaticResource EmptyStringToCollapsedConverter}}">
+                                            <TextBlock Text="{Binding Category}" FontSize="10"
+                                                       Foreground="{DynamicResource CustomFgSecondary}"/>
+                                        </Border>
+                                        <!-- 排期日期 -->
+                                        <TextBlock Text="{Binding ScheduledDate, StringFormat='{}{0:MM-dd}'}"
+                                                   FontSize="10" HorizontalAlignment="Right"
+                                                   Foreground="#27AE60"
+                                                   Visibility="{Binding IsScheduled, Converter={StaticResource BoolToVisConverter}}"/>
+                                        <!-- 创建时间 -->
+                                        <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:MM-dd} 创建'}"
+                                                   FontSize="10" Opacity="0.4" HorizontalAlignment="Right"
+                                                   Foreground="{DynamicResource CustomFgTertiary}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+
+        <!-- 编辑对话框遮罩 -->
+        <Grid x:Name="EditOverlay" Grid.RowSpan="4" Visibility="Collapsed">
+            <Border Background="#80000000" MouseDown="OnOverlayClick"/>
+            <Border CornerRadius="12" Padding="24" MaxWidth="520" MinWidth="400"
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    Background="{DynamicResource CustomOverlayBg}">
+                <StackPanel>
+                    <TextBlock Text="编辑事项" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"
+                               Foreground="{DynamicResource CustomFg}"/>
+
+                    <!-- 标题 -->
+                    <TextBlock Text="标题" FontSize="12" Opacity="0.6" Margin="0,0,0,4"/>
+                    <ui:TextBox x:Name="EditTitle" PlaceholderText="事项标题" Margin="0,0,0,12"/>
+
+                    <!-- 描述 -->
+                    <TextBlock Text="描述" FontSize="12" Opacity="0.6" Margin="0,0,0,4"/>
+                    <TextBox x:Name="EditDescription" AcceptsReturn="True" TextWrapping="Wrap"
+                             MinHeight="80" MaxHeight="160" VerticalScrollBarVisibility="Auto"
+                             Margin="0,0,0,12"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 优先级 -->
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="优先级" FontSize="12" Opacity="0.6" Margin="0,0,0,4"/>
+                            <ComboBox x:Name="EditPriority" SelectedIndex="0">
+                                <ComboBoxItem Content="无"/>
+                                <ComboBoxItem Content="低"/>
+                                <ComboBoxItem Content="中"/>
+                                <ComboBoxItem Content="高"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- 分类 -->
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="分类" FontSize="12" Opacity="0.6" Margin="0,0,0,4"/>
+                            <ComboBox x:Name="EditCategory" IsEditable="True"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- 状态 -->
+                    <TextBlock Text="状态" FontSize="12" Opacity="0.6" Margin="0,12,0,4"/>
+                    <ComboBox x:Name="EditStatus">
+                        <ComboBoxItem Content="待处理"/>
+                        <ComboBoxItem Content="等待他人"/>
+                    </ComboBox>
+
+                    <!-- 等待说明 -->
+                    <TextBlock Text="等待说明（选填）" FontSize="12" Opacity="0.6" Margin="0,12,0,4"/>
+                    <ui:TextBox x:Name="EditWaitingFor" PlaceholderText="例如：等张三完成底盘对接"/>
+
+                    <!-- 按钮 -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                        <ui:Button Content="取消" Appearance="Secondary" Click="OnCancelEdit" Margin="0,0,8,0"/>
+                        <ui:Button Content="保存" Appearance="Primary" Click="OnSaveEdit"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- 排期日期选择对话框 -->
+        <Grid x:Name="ScheduleOverlay" Grid.RowSpan="4" Visibility="Collapsed">
+            <Border Background="#80000000" MouseDown="OnScheduleOverlayClick"/>
+            <Border CornerRadius="12" Padding="24" MaxWidth="360"
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    Background="{DynamicResource CustomOverlayBg}">
+                <StackPanel>
+                    <TextBlock Text="选择排期日期" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"
+                               Foreground="{DynamicResource CustomFg}"/>
+                    <Calendar x:Name="ScheduleDatePicker"
+                              HorizontalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                        <ui:Button Content="取消" Appearance="Secondary" Click="OnCancelSchedule" Margin="0,0,8,0"/>
+                        <ui:Button Content="确定排期" Appearance="Primary" Click="OnConfirmSchedule"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Page>

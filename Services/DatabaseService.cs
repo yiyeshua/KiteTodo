@@ -37,6 +37,9 @@ public class DatabaseService
     /// <summary>笔记集合（对应 Note 类）</summary>
     public ILiteCollection<Note> Notes => _db.GetCollection<Note>("notes");
 
+    /// <summary>事项池集合（对应 BacklogItem 类）</summary>
+    public ILiteCollection<BacklogItem> Backlogs => _db.GetCollection<BacklogItem>("backlogs");
+
     private DatabaseService()
     {
         // 数据库文件存放在用户本地应用数据目录下
@@ -61,6 +64,7 @@ public class DatabaseService
         Todos.EnsureIndex(x => x.CompletedAt);
         Todos.EnsureIndex(x => x.Category);
         Pomodoros.EnsureIndex(x => x.StartTime);
+        Backlogs.EnsureIndex(x => x.Status);
     }
 
     /// <summary>确保设置集合中有默认记录（首次运行时插入）</summary>
