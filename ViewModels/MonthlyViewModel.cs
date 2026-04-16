@@ -6,6 +6,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KiteTodo.Helpers;
 using KiteTodo.Models;
 using KiteTodo.Services;
 
@@ -119,7 +120,9 @@ public partial class MonthlyViewModel : ObservableObject
             {
                 Date = date,
                 Day = day,
-                IsToday = date == DateTime.Today
+                IsToday = date == DateTime.Today,
+                LunarDateText = LunarCalendarHelper.GetLunarDateText(date),
+                FullLunarDateText = LunarCalendarHelper.GetFullLunarDateText(date)
             };
 
             // 填充该天的待办统计和预览
@@ -243,6 +246,12 @@ public partial class DayCellInfo : ObservableObject
 
     /// <summary>是否是今天</summary>
     public bool IsToday { get; set; }
+
+    /// <summary>农历简短显示（初五、春节、三月等）</summary>
+    public string LunarDateText { get; set; } = string.Empty;
+
+    /// <summary>农历完整显示（农历三月初五）</summary>
+    public string FullLunarDateText { get; set; } = string.Empty;
 
     /// <summary>该天待办总数</summary>
     [ObservableProperty]

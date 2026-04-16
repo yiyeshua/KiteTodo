@@ -95,7 +95,7 @@
                                 <RowDefinition Height="*"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <!-- Day number + count -->
+                            <!-- Day number + lunar + count -->
                             <DockPanel Grid.Row="0">
                                 <TextBlock Text="{Binding Day}" FontSize="14" FontWeight="Bold" DockPanel.Dock="Left"
                                            Foreground="{DynamicResource CustomFg}">
@@ -104,6 +104,20 @@
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsToday}" Value="True">
                                                     <Setter Property="Foreground" Value="White"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Text="{Binding LunarDateText}" FontSize="9" Opacity="0.5"
+                                           DockPanel.Dock="Left" VerticalAlignment="Center" Margin="4,1,0,0"
+                                           ToolTip="{Binding FullLunarDateText}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                    <Setter Property="Foreground" Value="White"/>
+                                                    <Setter Property="Opacity" Value="0.7"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -188,12 +202,14 @@
                     <DropShadowEffect BlurRadius="20" Opacity="0.3" ShadowDepth="4"/>
                 </Border.Effect>
                 <StackPanel>
-                    <DockPanel Margin="0,0,0,12">
+                    <DockPanel Margin="0,0,0,4">
                         <TextBlock FontSize="18" FontWeight="SemiBold"
                                    Text="{Binding SelectedDay.Date, StringFormat='{}{0:yyyy-MM-dd dddd}'}"/>
                         <TextBlock Text="{Binding SelectedDay.ProgressPercent}" FontSize="13" Opacity="0.6"
                                    HorizontalAlignment="Right" VerticalAlignment="Center"/>
                     </DockPanel>
+                    <TextBlock Text="{Binding SelectedDay.FullLunarDateText}" FontSize="12" Opacity="0.5"
+                               Margin="0,0,0,12"/>
                     <ItemsControl ItemsSource="{Binding SelectedDayTodos}" MaxHeight="400">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
