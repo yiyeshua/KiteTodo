@@ -68,11 +68,11 @@
                 <DataTemplate>
                     <Border Margin="2" Padding="5" CornerRadius="8" MinHeight="80"
                             BorderThickness="1"
-                            BorderBrush="{DynamicResource CustomSubtleBorder}"
-                            Background="{DynamicResource CustomSubtleBg}"
                             Cursor="Hand" MouseLeftButtonUp="OnDayCellClick">
                         <Border.Style>
                             <Style TargetType="Border">
+                                <Setter Property="Background" Value="{DynamicResource CustomSubtleBg}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource CustomSubtleBorder}"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsToday}" Value="True">
                                         <Setter Property="Background" Value="#0078D4"/>
@@ -97,10 +97,10 @@
                             </Grid.RowDefinitions>
                             <!-- Day number + lunar + count -->
                             <DockPanel Grid.Row="0">
-                                <TextBlock Text="{Binding Day}" FontSize="14" FontWeight="Bold" DockPanel.Dock="Left"
-                                           Foreground="{DynamicResource CustomFg}">
+                                <TextBlock Text="{Binding Day}" FontSize="14" FontWeight="Bold" DockPanel.Dock="Left">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource CustomFg}"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsToday}" Value="True">
                                                     <Setter Property="Foreground" Value="White"/>
@@ -109,11 +109,12 @@
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <TextBlock Text="{Binding LunarDateText}" FontSize="9" Opacity="0.5"
+                                <TextBlock Text="{Binding LunarDateText}" FontSize="9"
                                            DockPanel.Dock="Left" VerticalAlignment="Center" Margin="4,1,0,0"
                                            ToolTip="{Binding FullLunarDateText}">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
+                                            <Setter Property="Opacity" Value="0.5"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsToday}" Value="True">
                                                     <Setter Property="Foreground" Value="White"/>
@@ -124,10 +125,10 @@
                                     </TextBlock.Style>
                                 </TextBlock>
                                 <TextBlock Text="{Binding Summary}" FontSize="10" FontWeight="SemiBold"
-                                           Foreground="#0078D4"
                                            HorizontalAlignment="Right" VerticalAlignment="Center">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="#0078D4"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding HasTodos}" Value="False">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
@@ -143,10 +144,10 @@
                             <!-- Todo preview titles -->
                             <TextBlock Grid.Row="1" Text="{Binding TodoTitles}" FontSize="9"
                                        TextTrimming="CharacterEllipsis" TextWrapping="Wrap"
-                                       MaxHeight="36" Margin="0,3,0,0"
-                                       Foreground="#0078D4">
+                                       MaxHeight="36" Margin="0,3,0,0">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#0078D4"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding HasTodos}" Value="False">
                                                 <Setter Property="Visibility" Value="Collapsed"/>
