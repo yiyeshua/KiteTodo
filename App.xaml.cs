@@ -201,10 +201,16 @@ public partial class App : Application
     {
         Dispatcher.BeginInvoke(() =>
         {
+            var settings = DatabaseService.Instance.GetSettings();
+
+            // 播放提示音
+            if (settings.EnableCompletionSound)
+                AlertService.PlayCompletionSound(settings.CompletionSoundName);
+
             if (completedState == PomodoroState.Focusing)
-                AlertService.ShowOverlayToast("☕ 该休息休息了", "起来走走，喝杯水吧");
+                AlertService.ShowOverlayToast("☕ 该休息休息了", "起来走走，喝杯水吧", settings.ToastDurationSeconds);
             else
-                AlertService.ShowOverlayToast("🍅 休息结束", "准备开始下一轮专注");
+                AlertService.ShowOverlayToast("🍅 休息结束", "准备开始下一轮专注", settings.ToastDurationSeconds);
         });
     }
 

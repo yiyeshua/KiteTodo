@@ -31,6 +31,18 @@ public class AppSettings
     /// <summary>是否开机自启动</summary>
     public bool LaunchAtStartup { get; set; }
 
+    /// <summary>专注完成提醒弹窗显示时长（秒），默认 5 秒</summary>
+    public int ToastDurationSeconds { get; set; } = 5;
+
+    /// <summary>是否在开始专注时弹出对话框（记录备注/心情）</summary>
+    public bool ShowFocusStartDialog { get; set; } = true;
+
+    /// <summary>是否在专注/休息完成时播放提示音</summary>
+    public bool EnableCompletionSound { get; set; } = true;
+
+    /// <summary>提示音名称：Default / Chime / Bell / Ding</summary>
+    public string CompletionSoundName { get; set; } = "Default";
+
     /// <summary>用户自定义的标签列表（预定义标签之外的）</summary>
     public List<string> CustomTags { get; set; } = new();
 

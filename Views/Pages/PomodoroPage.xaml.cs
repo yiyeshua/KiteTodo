@@ -25,6 +25,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using KiteTodo.Services;
 using KiteTodo.ViewModels;
 
 namespace KiteTodo.Views.Pages;
@@ -106,23 +107,31 @@ public partial class PomodoroPage : Page
 
     // ---- 按钮事件回调，每个操作都委托给 ViewModel 并刷新按钮状态 ----
 
-    /// <summary>点击"开始"按钮，先弹出专注开始对话框再启动计时</summary>
+    /// <summary>点击"开始"按钮，根据设置决定是否弹出专注开始对话框，然后启动计时</summary>
     private void OnStart(object sender, RoutedEventArgs e)
     {
-        var dialog = new FocusCompleteDialog
-        {
-            Owner = Window.GetWindow(this) ?? Application.Current.MainWindow
-        };
+        var settings = DatabaseService.Instance.GetSettings();
 
-        if (dialog.ShowDialog() == true)
+        if (settings.ShowFocusStartDialog)
         {
-            // 保存：暂存备注和心情，计时完成后写入记录
-            _vm.PendingNote = dialog.FocusNote;
-            _vm.PendingMood = dialog.SelectedMood;
+            var dialog = new FocusCompleteDialog
+            {
+                Owner = Window.GetWindow(this) ?? Application.Current.MainWindow
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                _vm.PendingNote = dialog.FocusNote;
+                _vm.PendingMood = dialog.SelectedMood;
+            }
+            else
+            {
+                _vm.PendingNote = null;
+                _vm.PendingMood = 0;
+            }
         }
         else
         {
-            // 跳过：不保存备注，但仍然启动计时
             _vm.PendingNote = null;
             _vm.PendingMood = 0;
         }

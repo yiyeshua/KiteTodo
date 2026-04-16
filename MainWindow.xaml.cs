@@ -11,7 +11,9 @@
 
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Wpf.Ui.Controls;
 
@@ -26,7 +28,32 @@ public partial class MainWindow : FluentWindow
         Loaded += (_, _) =>
         {
             NavView.Navigate(typeof(Views.Pages.HomePage));
+            DisableFrameInternalScroll();
         };
+    }
+
+    /// <summary>
+    /// 禁用 NavigationView 内部 Frame 自带的 ScrollViewer。
+    /// WPF 的 Frame 在加载 Page 时会自动包裹 ScrollViewer，导致 Page 内的 ScrollViewer 失效。
+    /// 遍历所有 ScrollViewer，禁用每一个，让各页面自行管理滚动。
+    /// </summary>
+    private void DisableFrameInternalScroll()
+    {
+        foreach (var sv in FindAllVisualChildren<ScrollViewer>(NavView))
+        {
+            sv.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
+        }
+    }
+
+    private static IEnumerable<T> FindAllVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T t) yield return t;
+            foreach (var sub in FindAllVisualChildren<T>(child))
+                yield return sub;
+        }
     }
 
     private void SetWindowIcon()

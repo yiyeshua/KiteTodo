@@ -2,81 +2,190 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:converters="clr-namespace:KiteTodo.Converters"
       Title="设置">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24,16,24,24">
-        <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+    <Page.Resources>
+        <converters:DefaultTagToVisibilityConverter x:Key="DefaultTagToVisConverter"/>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="24,16,24,24">
             <TextBlock Text="设置" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,20"/>
 
-            <!-- Pomodoro Settings -->
-            <TextBlock Text="番茄钟" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
-            <ui:Card Padding="16" Margin="0,0,0,16">
-                <StackPanel>
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="130"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="专注时长（分钟）" VerticalAlignment="Center"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding PomodoroDuration, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" Maximum="120" SpinButtonPlacementMode="Compact"/>
-                    </Grid>
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="130"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="短休息（分钟）" VerticalAlignment="Center"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding ShortBreakDuration, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" Maximum="30" SpinButtonPlacementMode="Compact"/>
-                    </Grid>
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="130"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="长休息（分钟）" VerticalAlignment="Center"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding LongBreakDuration, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" Maximum="60" SpinButtonPlacementMode="Compact"/>
-                    </Grid>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="130"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="长休息间隔（轮次）" VerticalAlignment="Center"/>
-                        <ui:NumberBox Grid.Column="1" Value="{Binding LongBreakInterval, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" Maximum="10" SpinButtonPlacementMode="Compact"/>
-                    </Grid>
-                </StackPanel>
-            </ui:Card>
+            <!-- Two-column layout -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-            <!-- Appearance -->
-            <TextBlock Text="外观" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
-            <ui:Card Padding="16" Margin="0,0,0,16">
-                <StackPanel>
-                    <CheckBox Content="深色模式" IsChecked="{Binding IsDarkMode}" Margin="0,0,0,0"/>
-                </StackPanel>
-            </ui:Card>
+                <!-- ===== Left Column ===== -->
+                <StackPanel Grid.Column="0">
 
-            <!-- General Settings -->
-            <TextBlock Text="通用" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
-            <ui:Card Padding="16" Margin="0,0,0,16">
-                <StackPanel>
-                    <CheckBox Content="开机自启动" IsChecked="{Binding LaunchAtStartup}"/>
+                    <!-- Pomodoro Settings -->
+                    <TextBlock Text="番茄钟" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                    <ui:Card Padding="16" Margin="0,0,0,16">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="130"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="专注时长（分钟）" VerticalAlignment="Center"/>
+                                <ui:NumberBox Grid.Column="1" Value="{Binding PomodoroDuration, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" Maximum="120" SpinButtonPlacementMode="Compact"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="130"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="短休息（分钟）" VerticalAlignment="Center"/>
+                                <ui:NumberBox Grid.Column="1" Value="{Binding ShortBreakDuration, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" Maximum="30" SpinButtonPlacementMode="Compact"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="130"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="长休息（分钟）" VerticalAlignment="Center"/>
+                                <ui:NumberBox Grid.Column="1" Value="{Binding LongBreakDuration, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" Maximum="60" SpinButtonPlacementMode="Compact"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="130"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="长休息间隔（轮次）" VerticalAlignment="Center"/>
+                                <ui:NumberBox Grid.Column="1" Value="{Binding LongBreakInterval, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="1" Maximum="10" SpinButtonPlacementMode="Compact"/>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="130"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="弹出专注开始对话框" VerticalAlignment="Center"/>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding ShowFocusStartDialog}" HorizontalAlignment="Left"/>
+                            </Grid>
+                        </StackPanel>
+                    </ui:Card>
+
+                    <!-- Notification Settings -->
+                    <TextBlock Text="提醒通知" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                    <ui:Card Padding="16" Margin="0,0,0,16">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="130"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="提醒弹窗显示时长（秒）" VerticalAlignment="Center"/>
+                                <ui:NumberBox Grid.Column="1" Value="{Binding ToastDurationSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Minimum="2" Maximum="30" SpinButtonPlacementMode="Compact"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="130"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="完成提示音" VerticalAlignment="Center"/>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding EnableCompletionSound}" HorizontalAlignment="Left"/>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="130"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="提示音效" VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding AvailableSounds}"
+                                          SelectedItem="{Binding CompletionSoundName}" Width="120" HorizontalAlignment="Left"/>
+                            </Grid>
+                        </StackPanel>
+                    </ui:Card>
+
+                    <!-- Appearance + General -->
+                    <TextBlock Text="外观与通用" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                    <ui:Card Padding="16" Margin="0,0,0,16">
+                        <StackPanel>
+                            <CheckBox Content="深色模式" IsChecked="{Binding IsDarkMode}" Margin="0,0,0,8"/>
+                            <CheckBox Content="开机自启动" IsChecked="{Binding LaunchAtStartup}"/>
+                        </StackPanel>
+                    </ui:Card>
                 </StackPanel>
-            </ui:Card>
+
+                <!-- ===== Right Column ===== -->
+                <StackPanel Grid.Column="2">
+
+                    <!-- Tag Management -->
+                    <TextBlock Text="标签管理" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                    <ui:Card Padding="16" Margin="0,0,0,16">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <ui:TextBox PlaceholderText="输入新标签..." Width="200"
+                                            Text="{Binding NewTagText, UpdateSourceTrigger=PropertyChanged}"/>
+                                <ui:Button Content="添加" Appearance="Primary" Margin="8,0,0,0"
+                                           Command="{Binding AddTagCommand}" Padding="12,6"/>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding CustomTags}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border CornerRadius="12" Padding="10,4" Margin="0,0,6,6"
+                                                Background="#200078D4">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding}" VerticalAlignment="Center" FontSize="13"/>
+                                                <ui:Button Padding="2" Margin="6,0,0,0" Appearance="Secondary"
+                                                           Icon="{ui:SymbolIcon Dismiss16}"
+                                                           Click="OnRemoveTag" Tag="{Binding}"
+                                                           ToolTip="删除标签"
+                                                           Visibility="{Binding Converter={StaticResource DefaultTagToVisConverter}}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ui:Card>
+
+                    <!-- Data -->
+                    <TextBlock Text="数据" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                    <ui:Card Padding="16" Margin="0,0,0,16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="数据存储路径" FontSize="13" Opacity="0.6" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding DataPath}" FontSize="12" TextWrapping="Wrap"
+                                           Opacity="0.9" IsHitTestVisible="False"/>
+                            </StackPanel>
+                            <ui:Button Grid.Column="1" Content="打开目录" Appearance="Secondary"
+                                       Command="{Binding OpenDataFolderCommand}" Padding="12,6"
+                                       VerticalAlignment="Center" Margin="12,0,0,0"/>
+                        </Grid>
+                    </ui:Card>
+
+                    <!-- About -->
+                    <TextBlock Text="关于" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                    <ui:Card Padding="16" Margin="0,0,0,16">
+                        <StackPanel>
+                            <TextBlock Text="KiteTodo v1.0.0 - 风筝待办" FontWeight="SemiBold"/>
+                            <TextBlock Text="一款轻量级桌面待办事项管理工具" Opacity="0.7" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </ui:Card>
+                </StackPanel>
+            </Grid>
 
             <!-- Save -->
             <ui:Button Content="保存设置" Appearance="Primary" Click="OnSave"
-                       Icon="{ui:SymbolIcon Save24}" HorizontalAlignment="Left"/>
+                       Icon="{ui:SymbolIcon Save24}" HorizontalAlignment="Left" Margin="0,8,0,0"/>
             <TextBlock Text="{Binding StatusMessage}" Margin="0,8,0,0" Opacity="0.7"
                        Foreground="Green"/>
-
-            <!-- About -->
-            <TextBlock Text="关于" FontSize="16" FontWeight="SemiBold" Margin="0,24,0,12"/>
-            <ui:Card Padding="16" Margin="0,0,0,24">
-                <StackPanel>
-                    <TextBlock Text="KiteTodo v1.0.0 - 风筝待办" FontWeight="SemiBold"/>
-                    <TextBlock Text="一款轻量级桌面待办事项管理工具" Opacity="0.7" Margin="0,4,0,0"/>
-                </StackPanel>
-            </ui:Card>
         </StackPanel>
     </ScrollViewer>
 </Page>

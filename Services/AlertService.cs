@@ -1,3 +1,4 @@
+using System.Media;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -12,10 +13,33 @@ namespace KiteTodo.Services;
 /// </summary>
 public static class AlertService
 {
+    /// <summary>播放完成提示音</summary>
+    public static void PlayCompletionSound(string soundName)
+    {
+        try
+        {
+            switch (soundName)
+            {
+                case "Chime":
+                    SystemSounds.Exclamation.Play();
+                    break;
+                case "Bell":
+                    SystemSounds.Asterisk.Play();
+                    break;
+                case "Ding":
+                    SystemSounds.Hand.Play();
+                    break;
+                default:
+                    SystemSounds.Beep.Play();
+                    break;
+            }
+        }
+        catch { }
+    }
     /// <summary>
-    /// 弹出居中大号提示窗口，点击任意位置或 5 秒后自动关闭。
+    /// 弹出居中大号提示窗口，点击任意位置或指定秒数后自动关闭。
     /// </summary>
-    public static void ShowOverlayToast(string message, string? subMessage = null)
+    public static void ShowOverlayToast(string message, string? subMessage = null, int durationSeconds = 5)
     {
         try
         {
@@ -112,8 +136,8 @@ public static class AlertService
                 toast.BeginAnimation(UIElement.OpacityProperty, fadeIn);
             };
 
-            // 5 秒后自动淡出关闭
-            var autoClose = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            // 指定时间后自动淡出关闭
+            var autoClose = new DispatcherTimer { Interval = TimeSpan.FromSeconds(durationSeconds) };
             autoClose.Tick += (_, _) =>
             {
                 autoClose.Stop();

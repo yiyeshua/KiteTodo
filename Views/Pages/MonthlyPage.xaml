@@ -260,6 +260,15 @@
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
+                    <!-- Quick add todo -->
+                    <DockPanel Margin="0,10,0,0">
+                        <ui:Button Content="添加" Appearance="Primary" DockPanel.Dock="Right"
+                                   Margin="8,0,0,0" Click="OnAddTodoClick"/>
+                        <ui:TextBox x:Name="DayDetailNewTodoInput"
+                                    PlaceholderText="快速添加待办..."
+                                    Text="{Binding NewTodoTitle, UpdateSourceTrigger=PropertyChanged}"
+                                    KeyDown="OnNewTodoKeyDown"/>
+                    </DockPanel>
                     <ui:Button Content="关闭" Appearance="Secondary" HorizontalAlignment="Right"
                                Click="OnCloseDayDetailBtn" Margin="0,8,0,0"/>
                 </StackPanel>

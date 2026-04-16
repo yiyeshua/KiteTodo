@@ -33,4 +33,11 @@ public partial class SettingsPage : Page
 
     /// <summary>点击"保存设置"按钮，将当前设置持久化到数据库</summary>
     private void OnSave(object sender, RoutedEventArgs e) => _vm.SaveSettingsCommand.Execute(null);
+
+    /// <summary>删除标签按钮回调</summary>
+    private void OnRemoveTag(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is string tag)
+            _vm.RemoveTagCommand.Execute(tag);
+    }
 }

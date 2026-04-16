@@ -87,4 +87,20 @@ public partial class MonthlyPage : Page
     {
         _vm.CloseDayDetail();
     }
+
+    /// <summary>点击"添加"按钮新增待办</summary>
+    private void OnAddTodoClick(object sender, RoutedEventArgs e)
+    {
+        _vm.AddTodoToSelectedDayCommand.Execute(null);
+    }
+
+    /// <summary>输入框回车新增待办</summary>
+    private void OnNewTodoKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            _vm.AddTodoToSelectedDayCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
 }

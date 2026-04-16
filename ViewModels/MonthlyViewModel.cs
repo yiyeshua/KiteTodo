@@ -50,6 +50,10 @@ public partial class MonthlyViewModel : ObservableObject
     [ObservableProperty]
     private bool _showDayDetail;
 
+    /// <summary>新增待办标题（详情弹窗中的输入框）</summary>
+    [ObservableProperty]
+    private string _newTodoTitle = string.Empty;
+
     /// <summary>本月待办总数</summary>
     [ObservableProperty]
     private int _monthTotalTodos;
@@ -151,6 +155,41 @@ public partial class MonthlyViewModel : ObservableObject
     public void CloseDayDetail()
     {
         ShowDayDetail = false;
+        NewTodoTitle = string.Empty;
+    }
+
+    /// <summary>在选中日期新增一条待办</summary>
+    [RelayCommand]
+    private void AddTodoToSelectedDay()
+    {
+        if (SelectedDay == null || string.IsNullOrWhiteSpace(NewTodoTitle)) return;
+
+        var todo = new TodoItem
+        {
+            Title = NewTodoTitle.Trim(),
+            ScheduledDate = SelectedDay.Date
+        };
+        _todoService.Add(todo);
+        NewTodoTitle = string.Empty;
+
+        // 刷新详情列表
+        var todos = _todoService.GetTodosByDate(SelectedDay.Date);
+        SelectedDayTodos = new ObservableCollection<TodoItem>(todos);
+
+        // 刷新该日历单元格的统计
+        SelectedDay.TotalCount = todos.Count;
+        SelectedDay.CompletedCount = todos.Count(t => t.IsCompleted);
+        SelectedDay.TodoTitles = string.Join("\n",
+            todos.Take(3).Select(t => (t.IsCompleted ? "✓ " : "○ ") + t.Title));
+        if (todos.Count > 3)
+            SelectedDay.TodoTitles += $"\n... 还有 {todos.Count - 3} 项";
+
+        // 刷新月统计
+        var start = new DateTime(CurrentYear, CurrentMonth, 1);
+        var end = start.AddMonths(1).AddDays(-1);
+        var allTodos = _todoService.GetTodosByDateRange(start, end);
+        MonthTotalTodos = allTodos.Count;
+        MonthCompletedTodos = allTodos.Count(t => t.IsCompleted);
     }
 
     /// <summary>切换到上一月</summary>

@@ -237,3 +237,20 @@ public class EmptyStringToCollapsedConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => throw new NotImplementedException();
 }
+
+/// <summary>
+/// 默认标签 → Collapsed 转换器
+/// 默认标签隐藏删除按钮，自定义标签显示删除按钮
+/// </summary>
+public class DefaultTagToVisibilityConverter : IValueConverter
+{
+    private static readonly HashSet<string> DefaultTags = new(KiteTodo.ViewModels.HomeViewModel.DefaultTags);
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is string tag && DefaultTags.Contains(tag) ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
