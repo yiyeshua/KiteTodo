@@ -90,6 +90,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <StackPanel Margin="10,10,10,6">
@@ -147,6 +148,37 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
+
+                    <Grid Grid.Row="2" Margin="8,0,8,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <ui:Button x:Name="SavedFlowchartsPrevPageButton"
+                                   Grid.Column="0"
+                                   Width="34"
+                                   Height="30"
+                                   Appearance="Secondary"
+                                   Content="◀"
+                                   Click="OnSavedFlowchartsPrevPageClick"/>
+
+                        <TextBlock x:Name="SavedFlowchartsPageInfoText"
+                                   Grid.Column="1"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource CustomFgSecondary}"/>
+
+                        <ui:Button x:Name="SavedFlowchartsNextPageButton"
+                                   Grid.Column="2"
+                                   Width="34"
+                                   Height="30"
+                                   Appearance="Secondary"
+                                   Content="▶"
+                                   Click="OnSavedFlowchartsNextPageClick"/>
+                    </Grid>
                 </Grid>
             </Border>
 

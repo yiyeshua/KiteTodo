@@ -1,5 +1,6 @@
 using System.IO;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -25,8 +26,22 @@ public partial class DiagramDesignerPage : Page
 {
     private const int DefaultNodeZIndex = 10;
     private const double PasteOffsetStep = 24;
+    private const int SavedFlowchartsPageSize = 8;
     private static readonly TimeSpan AutoSaveDelay = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan PaletteDuplicateSuppressWindow = TimeSpan.FromMilliseconds(200);
+
+    private enum ExportImageScope
+    {
+        VisibleArea,
+        EntireCanvas,
+        ContentBounds
+    }
+
+    private sealed class ExportImageOptions
+    {
+        public required ExportImageScope Scope { get; init; }
+        public required double Scale { get; init; }
+    }
 
     private sealed class SnapResult
     {
@@ -90,6 +105,7 @@ public partial class DiagramDesignerPage : Page
     private readonly List<ConnectionVisual> _connectionViews = new();
     private readonly HashSet<Guid> _selectedNodeIds = new();
     private readonly ObservableCollection<FlowchartStorageItem> _savedFlowcharts = [];
+    private readonly ObservableCollection<FlowchartStorageItem> _pagedSavedFlowcharts = [];
     private readonly DispatcherTimer _autoSaveTimer;
 
     private FlowchartDocument _document = new();
@@ -123,6 +139,7 @@ public partial class DiagramDesignerPage : Page
     private bool _selectionAppendMode;
     private Point _canvasSelectionStart;
     private Guid? _selectedConnectionId;
+    private int _savedFlowchartsPageIndex;
     private Guid? _draggingConnectionId;
     private bool _draggingConnectionSourceAnchor;
     private Ellipse? _draggingConnectionHandle;
@@ -143,7 +160,7 @@ public partial class DiagramDesignerPage : Page
         InitializeComponent();
         _autoSaveTimer = new DispatcherTimer { Interval = AutoSaveDelay };
         _autoSaveTimer.Tick += OnAutoSaveTimerTick;
-        SavedFlowchartsListBox.ItemsSource = _savedFlowcharts;
+        SavedFlowchartsListBox.ItemsSource = _pagedSavedFlowcharts;
         DesignerCanvas.ContextMenu = CreateCanvasContextMenu();
         Loaded += (_, _) =>
         {
@@ -860,9 +877,63 @@ public partial class DiagramDesignerPage : Page
             _savedFlowcharts.Add(item);
 
         if (_currentFlowchartStorageId.HasValue)
-            SavedFlowchartsListBox.SelectedItem = _savedFlowcharts.FirstOrDefault(item => item.Id == _currentFlowchartStorageId.Value);
+            MoveSavedFlowchartsPageToItem(_currentFlowchartStorageId.Value);
+
+        RefreshPagedSavedFlowcharts();
+    }
+
+    private void RefreshPagedSavedFlowcharts()
+    {
+        var pageCount = GetSavedFlowchartsPageCount();
+        _savedFlowchartsPageIndex = Math.Clamp(_savedFlowchartsPageIndex, 0, Math.Max(0, pageCount - 1));
+
+        _pagedSavedFlowcharts.Clear();
+        foreach (var item in _savedFlowcharts.Skip(_savedFlowchartsPageIndex * SavedFlowchartsPageSize).Take(SavedFlowchartsPageSize))
+            _pagedSavedFlowcharts.Add(item);
+
+        SavedFlowchartsPageInfoText.Text = $"第 {_savedFlowchartsPageIndex + 1} / {pageCount} 页";
+        SavedFlowchartsPrevPageButton.IsEnabled = _savedFlowchartsPageIndex > 0;
+        SavedFlowchartsNextPageButton.IsEnabled = _savedFlowchartsPageIndex < pageCount - 1;
+
+        if (_currentFlowchartStorageId.HasValue)
+            SavedFlowchartsListBox.SelectedItem = _pagedSavedFlowcharts.FirstOrDefault(item => item.Id == _currentFlowchartStorageId.Value);
         else
             SavedFlowchartsListBox.SelectedItem = null;
+    }
+
+    private int GetSavedFlowchartsPageCount()
+    {
+        return Math.Max(1, (int)Math.Ceiling(_savedFlowcharts.Count / (double)SavedFlowchartsPageSize));
+    }
+
+    private void MoveSavedFlowchartsPageToItem(int itemId)
+    {
+        var index = _savedFlowcharts
+            .Select((item, position) => new { item, position })
+            .FirstOrDefault(entry => entry.item.Id == itemId)?.position;
+
+        if (index.HasValue)
+            _savedFlowchartsPageIndex = index.Value / SavedFlowchartsPageSize;
+        else
+            _savedFlowchartsPageIndex = Math.Clamp(_savedFlowchartsPageIndex, 0, Math.Max(0, GetSavedFlowchartsPageCount() - 1));
+    }
+
+    private void OnSavedFlowchartsPrevPageClick(object sender, RoutedEventArgs e)
+    {
+        if (_savedFlowchartsPageIndex <= 0)
+            return;
+
+        _savedFlowchartsPageIndex--;
+        RefreshPagedSavedFlowcharts();
+    }
+
+    private void OnSavedFlowchartsNextPageClick(object sender, RoutedEventArgs e)
+    {
+        if (_savedFlowchartsPageIndex >= GetSavedFlowchartsPageCount() - 1)
+            return;
+
+        _savedFlowchartsPageIndex++;
+        RefreshPagedSavedFlowcharts();
     }
 
     private ContextMenu CreateNodeContextMenu()
@@ -1445,7 +1516,8 @@ public partial class DiagramDesignerPage : Page
         else
             _savedFlowcharts.Insert(0, item);
 
-        SavedFlowchartsListBox.SelectedItem = _savedFlowcharts.FirstOrDefault(flowchart => flowchart.Id == item.Id);
+        MoveSavedFlowchartsPageToItem(item.Id);
+        RefreshPagedSavedFlowcharts();
     }
 
     private SaveFlowchartRequest? ShowSaveFlowchartDialog(string initialName, FlowchartStorageType? initialStorageType, string? initialFilePath)
@@ -2757,38 +2829,352 @@ public partial class DiagramDesignerPage : Page
             Math.Min(DesignerCanvas.Height, maxY - minY + padding * 2));
     }
 
-    private BitmapSource RenderDocumentBitmap()
+    private BitmapSource RenderDocumentBitmap(ExportImageOptions options)
     {
-        var bounds = GetDocumentBounds();
-        var width = Math.Max(1, (int)Math.Ceiling(bounds.Width));
-        var height = Math.Max(1, (int)Math.Ceiling(bounds.Height));
-
+        var bounds = GetExportBounds(options.Scope);
+        var scale = Math.Max(1, options.Scale);
+        var width = Math.Max(1, (int)Math.Ceiling(bounds.Width * scale));
+        var height = Math.Max(1, (int)Math.Ceiling(bounds.Height * scale));
         var visual = new DrawingVisual();
-        using var context = visual.RenderOpen();
-        context.DrawRectangle(Brushes.White, null, new Rect(0, 0, bounds.Width, bounds.Height));
-        var brush = new VisualBrush(DesignerCanvas)
-        {
-            Stretch = Stretch.None,
-            AlignmentX = AlignmentX.Left,
-            AlignmentY = AlignmentY.Top,
-            ViewboxUnits = BrushMappingMode.Absolute,
-            Viewbox = bounds
-        };
-        context.DrawRectangle(brush, null, new Rect(0, 0, bounds.Width, bounds.Height));
 
-        var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+        using (var context = visual.RenderOpen())
+        {
+            context.DrawRectangle(Brushes.White, null, new Rect(0, 0, bounds.Width, bounds.Height));
+            context.PushClip(new RectangleGeometry(new Rect(0, 0, bounds.Width, bounds.Height)));
+            context.PushTransform(new TranslateTransform(-bounds.X, -bounds.Y));
+
+            DrawExportGrid(context, bounds);
+            DrawExportConnections(context);
+            DrawExportNodes(context);
+
+            context.Pop();
+            context.Pop();
+        }
+
+        var dpi = 96 * scale;
+        var bitmap = new RenderTargetBitmap(width, height, dpi, dpi, PixelFormats.Pbgra32);
         bitmap.Render(visual);
         bitmap.Freeze();
         return bitmap;
     }
 
+    private Rect GetExportBounds(ExportImageScope scope)
+    {
+        return scope switch
+        {
+            ExportImageScope.VisibleArea => GetVisibleCanvasBounds(),
+            ExportImageScope.EntireCanvas => new Rect(0, 0, DesignerCanvas.Width, DesignerCanvas.Height),
+            _ => GetDocumentBounds()
+        };
+    }
+
+    private Rect GetVisibleCanvasBounds()
+    {
+        var zoom = Math.Max(0.01, _zoomLevel);
+        var left = DesignerScrollViewer.HorizontalOffset / zoom;
+        var top = DesignerScrollViewer.VerticalOffset / zoom;
+        var viewportWidth = (DesignerScrollViewer.ViewportWidth > 0 ? DesignerScrollViewer.ViewportWidth : DesignerScrollViewer.ActualWidth) / zoom;
+        var viewportHeight = (DesignerScrollViewer.ViewportHeight > 0 ? DesignerScrollViewer.ViewportHeight : DesignerScrollViewer.ActualHeight) / zoom;
+        var width = Math.Max(1, Math.Min(DesignerCanvas.Width - left, viewportWidth));
+        var height = Math.Max(1, Math.Min(DesignerCanvas.Height - top, viewportHeight));
+        return new Rect(Math.Max(0, left), Math.Max(0, top), width, height);
+    }
+
+    private static void DrawExportGrid(DrawingContext context, Rect bounds)
+    {
+        const double gridSize = 32;
+        var pen = new Pen(new SolidColorBrush(Color.FromRgb(216, 221, 230)), 1);
+        pen.Freeze();
+
+        var startX = Math.Floor(bounds.X / gridSize) * gridSize;
+        var startY = Math.Floor(bounds.Y / gridSize) * gridSize;
+
+        for (var x = startX; x <= bounds.Right; x += gridSize)
+            context.DrawLine(pen, new Point(x, bounds.Y), new Point(x, bounds.Bottom));
+
+        for (var y = startY; y <= bounds.Bottom; y += gridSize)
+            context.DrawLine(pen, new Point(bounds.X, y), new Point(bounds.Right, y));
+    }
+
+    private void DrawExportConnections(DrawingContext context)
+    {
+        var strokeBrush = new SolidColorBrush(Color.FromRgb(71, 85, 105));
+        strokeBrush.Freeze();
+        var pen = new Pen(strokeBrush, 2)
+        {
+            StartLineCap = PenLineCap.Round,
+            EndLineCap = PenLineCap.Round
+        };
+        pen.Freeze();
+
+        foreach (var connection in _document.Connections)
+        {
+            var source = _document.Nodes.FirstOrDefault(node => node.Id == connection.SourceNodeId);
+            var target = _document.Nodes.FirstOrDefault(node => node.Id == connection.TargetNodeId);
+            if (source == null || target == null)
+                continue;
+
+            var sourceCenter = GetNodeCenter(source);
+            var targetCenter = GetNodeCenter(target);
+            var start = GetConnectionAnchorPoint(source, connection.SourceAnchorSide, connection.SourceAnchorCoordinate, targetCenter);
+            var end = GetConnectionAnchorPoint(target, connection.TargetAnchorSide, connection.TargetAnchorCoordinate, sourceCenter);
+            var points = BuildConnectionPath(connection, start, end);
+            if (points.Count < 2)
+                continue;
+
+            var geometry = new StreamGeometry();
+            using (var geometryContext = geometry.Open())
+            {
+                geometryContext.BeginFigure(points[0], false, false);
+                geometryContext.PolyLineTo(points.Skip(1).ToArray(), true, true);
+            }
+            geometry.Freeze();
+            context.DrawGeometry(null, pen, geometry);
+
+            var arrowBase = points.Count >= 2 ? points[^2] : start;
+            var angle = Math.Atan2(end.Y - arrowBase.Y, end.X - arrowBase.X);
+            const double arrowLength = 18;
+            const double arrowWidth = 8;
+            var p1 = end;
+            var p2 = new Point(
+                end.X - arrowLength * Math.Cos(angle) + arrowWidth * Math.Sin(angle),
+                end.Y - arrowLength * Math.Sin(angle) - arrowWidth * Math.Cos(angle));
+            var p3 = new Point(
+                end.X - arrowLength * Math.Cos(angle) - arrowWidth * Math.Sin(angle),
+                end.Y - arrowLength * Math.Sin(angle) + arrowWidth * Math.Cos(angle));
+            var arrowGeometry = new StreamGeometry();
+            using (var arrowContext = arrowGeometry.Open())
+            {
+                arrowContext.BeginFigure(p1, true, true);
+                arrowContext.LineTo(p2, true, true);
+                arrowContext.LineTo(p3, true, true);
+            }
+            arrowGeometry.Freeze();
+            context.DrawGeometry(strokeBrush, null, arrowGeometry);
+        }
+    }
+
+    private void DrawExportNodes(DrawingContext context)
+    {
+        foreach (var node in _document.Nodes.OrderBy(node => node.ZIndex))
+        {
+            switch (node.Type)
+            {
+                case FlowchartNodeType.StartEnd:
+                    DrawEllipseNode(context, node);
+                    break;
+                case FlowchartNodeType.Decision:
+                    DrawDecisionNode(context, node);
+                    break;
+                case FlowchartNodeType.Text:
+                    DrawTextShapeNode(context, node);
+                    break;
+                default:
+                    DrawProcessNode(context, node);
+                    break;
+            }
+
+            DrawNodeLabel(context, node);
+        }
+    }
+
+    private static void DrawProcessNode(DrawingContext context, FlowchartNode node)
+    {
+        var fill = new SolidColorBrush(Color.FromRgb(250, 250, 250));
+        var stroke = new SolidColorBrush(Color.FromRgb(107, 114, 128));
+        fill.Freeze();
+        stroke.Freeze();
+        var pen = new Pen(stroke, 2);
+        pen.Freeze();
+        context.DrawRoundedRectangle(fill, pen, new Rect(node.X, node.Y, node.Width, node.Height), 8, 8);
+    }
+
+    private static void DrawEllipseNode(DrawingContext context, FlowchartNode node)
+    {
+        var fill = new SolidColorBrush(Color.FromRgb(240, 249, 255));
+        var stroke = new SolidColorBrush(Color.FromRgb(14, 116, 144));
+        fill.Freeze();
+        stroke.Freeze();
+        var pen = new Pen(stroke, 2);
+        pen.Freeze();
+        context.DrawEllipse(fill, pen, new Point(node.X + node.Width / 2, node.Y + node.Height / 2), node.Width / 2, node.Height / 2);
+    }
+
+    private static void DrawDecisionNode(DrawingContext context, FlowchartNode node)
+    {
+        var fill = new SolidColorBrush(Color.FromRgb(255, 251, 235));
+        var stroke = new SolidColorBrush(Color.FromRgb(217, 119, 6));
+        fill.Freeze();
+        stroke.Freeze();
+        var pen = new Pen(stroke, 2);
+        pen.Freeze();
+        var geometry = new StreamGeometry();
+        using (var geometryContext = geometry.Open())
+        {
+            geometryContext.BeginFigure(new Point(node.X + node.Width / 2, node.Y), true, true);
+            geometryContext.LineTo(new Point(node.X + node.Width, node.Y + node.Height / 2), true, true);
+            geometryContext.LineTo(new Point(node.X + node.Width / 2, node.Y + node.Height), true, true);
+            geometryContext.LineTo(new Point(node.X, node.Y + node.Height / 2), true, true);
+        }
+        geometry.Freeze();
+        context.DrawGeometry(fill, pen, geometry);
+    }
+
+    private static void DrawTextShapeNode(DrawingContext context, FlowchartNode node)
+    {
+        var stroke = new SolidColorBrush(Color.FromRgb(148, 163, 184));
+        stroke.Freeze();
+        var pen = new Pen(stroke, 1.5)
+        {
+            DashStyle = new DashStyle([4, 2], 0)
+        };
+        pen.Freeze();
+        context.DrawRoundedRectangle(Brushes.White, pen, new Rect(node.X, node.Y, node.Width, node.Height), 4, 4);
+    }
+
+    private void DrawNodeLabel(DrawingContext context, FlowchartNode node)
+    {
+        var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+        var formattedText = new FormattedText(
+            node.Text ?? string.Empty,
+            CultureInfo.GetCultureInfo("zh-CN"),
+            FlowDirection.LeftToRight,
+            new Typeface(new FontFamily("Microsoft YaHei UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal),
+            14,
+            new SolidColorBrush(Color.FromRgb(31, 41, 55)),
+            pixelsPerDip)
+        {
+            MaxTextWidth = Math.Max(10, node.Width - 24),
+            MaxTextHeight = Math.Max(10, node.Height - 16),
+            TextAlignment = TextAlignment.Center,
+            Trimming = TextTrimming.None
+        };
+
+        var x = node.X + (node.Width - formattedText.WidthIncludingTrailingWhitespace) / 2;
+        var y = node.Y + (node.Height - formattedText.Height) / 2;
+        context.DrawText(formattedText, new Point(x, y));
+    }
+
+    private ExportImageOptions? ShowExportImageOptionsDialog()
+    {
+        var owner = Window.GetWindow(this);
+        ExportImageOptions? result = new ExportImageOptions
+        {
+            Scope = ExportImageScope.ContentBounds,
+            Scale = 3
+        };
+
+        var visibleRadio = new RadioButton
+        {
+            Content = "导出当前可见区域",
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        var contentBoundsRadio = new RadioButton
+        {
+            Content = "导出所有组件最小外包矩形",
+            Margin = new Thickness(0, 0, 0, 8),
+            IsChecked = true
+        };
+        var allCanvasRadio = new RadioButton
+        {
+            Content = "导出整个画布内容"
+        };
+
+        var scaleLabel = new TextBlock
+        {
+            Text = "导出清晰度",
+            FontSize = 13,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 12, 0, 8)
+        };
+        var scaleComboBox = new ComboBox
+        {
+            SelectedIndex = 2,
+            MinWidth = 120
+        };
+        scaleComboBox.Items.Add(new ComboBoxItem { Content = "标准 1x", Tag = 1.0 });
+        scaleComboBox.Items.Add(new ComboBoxItem { Content = "高清 2x", Tag = 2.0 });
+        scaleComboBox.Items.Add(new ComboBoxItem { Content = "超清 3x", Tag = 3.0 });
+
+        var panel = new StackPanel { Margin = new Thickness(16) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = "选择导出范围",
+            FontSize = 15,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 12)
+        });
+        panel.Children.Add(visibleRadio);
+        panel.Children.Add(contentBoundsRadio);
+        panel.Children.Add(allCanvasRadio);
+        panel.Children.Add(scaleLabel);
+        panel.Children.Add(scaleComboBox);
+
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 16, 0, 0)
+        };
+
+        var cancelButton = new Button { Content = "取消", MinWidth = 72, Margin = new Thickness(0, 0, 8, 0) };
+        var okButton = new Button { Content = "确定", MinWidth = 72 };
+        buttons.Children.Add(cancelButton);
+        buttons.Children.Add(okButton);
+        panel.Children.Add(buttons);
+
+        var window = new Window
+        {
+            Title = "导出图片",
+            Width = 360,
+            Height = 300,
+            ResizeMode = ResizeMode.NoResize,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Owner = owner,
+            Content = panel
+        };
+
+        cancelButton.Click += (_, _) =>
+        {
+            result = null;
+            window.DialogResult = false;
+            window.Close();
+        };
+        okButton.Click += (_, _) =>
+        {
+            var scope = visibleRadio.IsChecked == true
+                ? ExportImageScope.VisibleArea
+                : allCanvasRadio.IsChecked == true
+                    ? ExportImageScope.EntireCanvas
+                    : ExportImageScope.ContentBounds;
+            var scale = scaleComboBox.SelectedItem is ComboBoxItem { Tag: double selectedScale } ? selectedScale : 3.0;
+            result = new ExportImageOptions
+            {
+                Scope = scope,
+                Scale = scale
+            };
+            window.DialogResult = true;
+            window.Close();
+        };
+
+        return window.ShowDialog() == true ? result : null;
+    }
+
     private void OnCopyCanvasAsImage(object? sender, RoutedEventArgs e)
     {
-        Clipboard.SetImage(RenderDocumentBitmap());
+        var options = ShowExportImageOptionsDialog();
+        if (options == null)
+            return;
+
+        Clipboard.SetImage(RenderDocumentBitmap(options));
     }
 
     private void OnExportCanvasAsPng(object? sender, RoutedEventArgs e)
     {
+        var options = ShowExportImageOptionsDialog();
+        if (options == null)
+            return;
+
         var dialog = new SaveFileDialog
         {
             Filter = "PNG 图片 (*.png)|*.png",
@@ -2799,7 +3185,7 @@ public partial class DiagramDesignerPage : Page
             return;
 
         var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(RenderDocumentBitmap()));
+        encoder.Frames.Add(BitmapFrame.Create(RenderDocumentBitmap(options)));
         using var stream = File.Create(dialog.FileName);
         encoder.Save(stream);
     }
