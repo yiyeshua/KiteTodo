@@ -14,6 +14,7 @@ public class BackupData
     public List<Note> Notes { get; set; } = new();
     public List<PomodoroRecord> Pomodoros { get; set; } = new();
     public List<BacklogItem> Backlogs { get; set; } = new();
+    public List<FlowchartStorageItem> Flowcharts { get; set; } = new();
     public AppSettings? Settings { get; set; }
 }
 
@@ -41,6 +42,7 @@ public class BackupService
             Notes = _db.Notes.FindAll().ToList(),
             Pomodoros = _db.Pomodoros.FindAll().ToList(),
             Backlogs = _db.Backlogs.FindAll().ToList(),
+            Flowcharts = _db.Flowcharts.FindAll().ToList(),
             Settings = _db.GetSettings()
         };
         return JsonSerializer.Serialize(data, _jsonOptions);
@@ -72,6 +74,10 @@ public class BackupService
             foreach (var item in data.Backlogs)
                 _db.Backlogs.Insert(item);
 
+            _db.Flowcharts.DeleteAll();
+            foreach (var item in data.Flowcharts)
+                _db.Flowcharts.Insert(item);
+
             if (data.Settings != null)
             {
                 data.Settings.Id = 1;
@@ -80,7 +86,7 @@ public class BackupService
             }
 
             var msg = $"恢复成功！待办 {data.Todos.Count} 条，笔记 {data.Notes.Count} 条，" +
-                      $"番茄钟记录 {data.Pomodoros.Count} 条，事项池 {data.Backlogs.Count} 条。建议重启应用以刷新所有页面。";
+                      $"番茄钟记录 {data.Pomodoros.Count} 条，事项池 {data.Backlogs.Count} 条，流程图 {data.Flowcharts.Count} 条。建议重启应用以刷新所有页面。";
             return (true, msg);
         }
         catch (JsonException)

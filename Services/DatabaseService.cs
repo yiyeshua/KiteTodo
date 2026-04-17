@@ -40,6 +40,9 @@ public class DatabaseService
     /// <summary>事项池集合（对应 BacklogItem 类）</summary>
     public ILiteCollection<BacklogItem> Backlogs => _db.GetCollection<BacklogItem>("backlogs");
 
+    /// <summary>流程图集合（对应 FlowchartStorageItem 类）</summary>
+    public ILiteCollection<FlowchartStorageItem> Flowcharts => _db.GetCollection<FlowchartStorageItem>("flowcharts");
+
     private DatabaseService()
     {
         // 数据库文件存放在用户本地应用数据目录下
@@ -65,6 +68,8 @@ public class DatabaseService
         Todos.EnsureIndex(x => x.Category);
         Pomodoros.EnsureIndex(x => x.StartTime);
         Backlogs.EnsureIndex(x => x.Status);
+        Flowcharts.EnsureIndex(x => x.Name);
+        Flowcharts.EnsureIndex(x => x.UpdatedAt);
     }
 
     /// <summary>确保设置集合中有默认记录（首次运行时插入）</summary>
