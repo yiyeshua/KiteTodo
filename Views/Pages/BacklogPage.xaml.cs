@@ -16,6 +16,8 @@ namespace KiteTodo.Views.Pages;
 /// </summary>
 public partial class BacklogPage : Page
 {
+    private const double BacklogCardGap = 8;
+
     private readonly BacklogViewModel _vm = new();
     private BacklogItem? _editingItem;
     private BacklogItem? _schedulingItem;
@@ -25,6 +27,44 @@ public partial class BacklogPage : Page
         InitializeComponent();
         DataContext = _vm;
         LoadCategoryItems();
+        Loaded += (_, _) => UpdateBacklogListLayout();
+        BacklogListBox.ItemContainerGenerator.StatusChanged += (_, _) => UpdateBacklogListLayout();
+    }
+
+    private void OnBacklogListLoaded(object sender, RoutedEventArgs e)
+    {
+        UpdateBacklogListLayout();
+    }
+
+    private void OnBacklogListSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (Math.Abs(e.PreviousSize.Width - e.NewSize.Width) < 1)
+            return;
+
+        UpdateBacklogListLayout();
+    }
+
+    private void UpdateBacklogListLayout()
+    {
+        if (!IsLoaded || BacklogListBox.ActualWidth <= 0)
+            return;
+
+        var availableWidth = Math.Max(0, BacklogListBox.ActualWidth - SystemParameters.VerticalScrollBarWidth - 4);
+        var columns = availableWidth switch
+        {
+            >= 1200 => 3,
+            >= 760 => 2,
+            _ => 1
+        };
+
+        var itemWidth = Math.Max(0, (availableWidth - BacklogCardGap * Math.Max(0, columns - 1)) / columns);
+        for (var index = 0; index < BacklogListBox.Items.Count; index++)
+        {
+            if (BacklogListBox.ItemContainerGenerator.ContainerFromIndex(index) is not ListBoxItem container)
+                continue;
+
+            container.Width = itemWidth;
+        }
     }
 
     private void LoadCategoryItems()
@@ -123,7 +163,7 @@ public partial class BacklogPage : Page
         {
             // 直接打开编辑框让用户填写等待说明
             OpenEditDialog(item);
-            EditStatus.SelectedIndex = 1; // 等待他人
+            SetEditStatusSelection(BacklogItem.StatusWaiting);
         }
     }
 
@@ -147,7 +187,7 @@ public partial class BacklogPage : Page
         EditTitle.Text = item.Title;
         EditDescription.Text = item.Description ?? string.Empty;
         EditPriority.SelectedIndex = item.Priority;
-        EditStatus.SelectedIndex = item.Status < 2 ? item.Status : 0;
+        SetEditStatusSelection(item.Status);
         EditWaitingFor.Text = item.WaitingFor ?? string.Empty;
 
         // 分类
@@ -163,13 +203,30 @@ public partial class BacklogPage : Page
         _editingItem.Title = EditTitle.Text.Trim();
         _editingItem.Description = string.IsNullOrWhiteSpace(EditDescription.Text) ? null : EditDescription.Text.Trim();
         _editingItem.Priority = EditPriority.SelectedIndex;
-        _editingItem.Status = EditStatus.SelectedIndex;
+        _editingItem.Status = GetSelectedEditStatus();
         _editingItem.Category = EditCategory.Text?.Trim() ?? string.Empty;
         _editingItem.WaitingFor = string.IsNullOrWhiteSpace(EditWaitingFor.Text) ? null : EditWaitingFor.Text.Trim();
 
         _vm.SaveItem(_editingItem);
         EditOverlay.Visibility = Visibility.Collapsed;
         _editingItem = null;
+    }
+
+    private void SetEditStatusSelection(int status)
+    {
+        var index = EditStatus.Items
+            .OfType<ComboBoxItem>()
+            .Select((item, itemIndex) => new { Item = item, Index = itemIndex })
+            .FirstOrDefault(entry => entry.Item.Tag is string tag && int.TryParse(tag, out var value) && value == status)?.Index;
+
+        EditStatus.SelectedIndex = index ?? 0;
+    }
+
+    private int GetSelectedEditStatus()
+    {
+        return EditStatus.SelectedItem is ComboBoxItem { Tag: string tag } && int.TryParse(tag, out var status)
+            ? status
+            : BacklogItem.StatusPending;
     }
 
     private void OnCancelEdit(object sender, RoutedEventArgs e)

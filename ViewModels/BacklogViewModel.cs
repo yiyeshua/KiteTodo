@@ -26,6 +26,10 @@ public partial class BacklogViewModel : ObservableObject
     [ObservableProperty]
     private int _pendingCount;
 
+    /// <summary>活跃事项数</summary>
+    [ObservableProperty]
+    private int _activeCount;
+
     /// <summary>等待他人事项数</summary>
     [ObservableProperty]
     private int _waitingCount;
@@ -67,6 +71,7 @@ public partial class BacklogViewModel : ObservableObject
 
         // 统计
         var all = _backlogService.GetAll();
+        ActiveCount = all.Count(x => x.Status != BacklogItem.StatusScheduled);
         PendingCount = all.Count(x => x.Status == BacklogItem.StatusPending);
         WaitingCount = all.Count(x => x.Status == BacklogItem.StatusWaiting);
         ScheduledCount = all.Count(x => x.Status == BacklogItem.StatusScheduled);

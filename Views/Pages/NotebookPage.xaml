@@ -91,46 +91,117 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <!-- 编辑区工具栏（保存按钮） -->
-                <DockPanel Grid.Row="0"
-                           Visibility="{Binding SelectedNote, Converter={StaticResource NullToCollapsedConverter}}"
-                           Margin="0,0,0,8">
-                    <ui:Button DockPanel.Dock="Right"
-                               Icon="{ui:SymbolIcon Save24}"
-                               Content="保存"
-                               Appearance="Primary"
-                               Click="OnSaveNote"/>
-                    <TextBlock Text="编辑笔记" FontSize="13" Opacity="0.5"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource CustomFgSecondary}"/>
-                </DockPanel>
+                <!-- 标题与操作区 -->
+                <Grid Grid.Row="0"
+                      Visibility="{Binding SelectedNote, Converter={StaticResource NullToCollapsedConverter}}"
+                      Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                <!-- 标题编辑 -->
-                <ui:TextBox Grid.Row="1"
-                            Text="{Binding EditTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                            PlaceholderText="笔记标题" FontSize="18" FontWeight="SemiBold"
-                            Background="Transparent" BorderThickness="0"
-                            Foreground="{DynamicResource CustomFg}"
-                            Visibility="{Binding SelectedNote, Converter={StaticResource NullToCollapsedConverter}}"
-                            Margin="0,0,0,12"/>
+                    <ui:TextBox Grid.Column="0"
+                                Text="{Binding EditTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                PlaceholderText="笔记标题" FontSize="18" FontWeight="SemiBold"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="{DynamicResource CustomFg}"
+                                Margin="0,0,12,0"/>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <ui:Button Content="A-" Appearance="Secondary" Padding="10,4" Margin="0,0,6,0" Click="OnDecreaseFontSize"/>
+                        <ui:Button Content="A+" Appearance="Secondary" Padding="10,4" Margin="0,0,10,0" Click="OnIncreaseFontSize"/>
+                        <CheckBox x:Name="AutoWrapToggle"
+                                  Content="自动换行"
+                                  IsChecked="True"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,10,0"
+                                  Checked="OnAutoWrapChanged"
+                                  Unchecked="OnAutoWrapChanged"/>
+                        <ui:Button Icon="{ui:SymbolIcon Save24}"
+                                   Content="保存"
+                                   Appearance="Primary"
+                                   Click="OnSaveNote"/>
+                    </StackPanel>
+                </Grid>
 
                 <!-- 内容编辑 -->
-                <TextBox Grid.Row="2"
-                         Text="{Binding EditContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         AcceptsReturn="True" TextWrapping="Wrap"
-                         FontSize="13"
-                         Background="Transparent" BorderThickness="0"
-                         Foreground="{DynamicResource CustomFg}"
-                         CaretBrush="{DynamicResource CustomFg}"
-                         VerticalScrollBarVisibility="Auto"
-                         Visibility="{Binding SelectedNote, Converter={StaticResource NullToCollapsedConverter}}"/>
+                <Border Grid.Row="1"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource CustomSubtleBorder}"
+                        Background="{DynamicResource CustomSubtleBg}"
+                        Visibility="{Binding SelectedNote, Converter={StaticResource NullToCollapsedConverter}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="52"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox x:Name="LineNumberGutter"
+                                 Grid.Column="0"
+                                 IsReadOnly="True"
+                                 IsReadOnlyCaretVisible="False"
+                                 IsTabStop="False"
+                                 Focusable="False"
+                                 BorderThickness="0,0,1,0"
+                                 BorderBrush="{DynamicResource CustomSubtleBorder}"
+                                 Background="#12000000"
+                                 Foreground="{DynamicResource CustomFgSecondary}"
+                                 FontFamily="Consolas"
+                                 FontSize="13"
+                                 Padding="8,10,6,10"
+                                 TextAlignment="Right"
+                                 VerticalScrollBarVisibility="Hidden"
+                                 HorizontalScrollBarVisibility="Hidden"/>
+
+                        <Border x:Name="CurrentLineHighlight"
+                            Grid.Column="1"
+                            Margin="0,0,0,0"
+                            Height="0"
+                            Background="#33FFD54F"
+                            BorderBrush="#55E0B400"
+                            BorderThickness="0,1,0,1"
+                            CornerRadius="0"
+                            VerticalAlignment="Top"
+                            HorizontalAlignment="Stretch"
+                            IsHitTestVisible="False"
+                            Opacity="1"
+                            Panel.ZIndex="2"
+                            Visibility="Collapsed"/>
+
+                        <TextBox x:Name="NoteEditor"
+                                 Grid.Column="1"
+                                 Text="{Binding EditContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=120}"
+                                 AcceptsReturn="True"
+                                 AcceptsTab="True"
+                                 TextWrapping="Wrap"
+                                 FontFamily="Consolas"
+                                 FontSize="13"
+                                 Padding="10"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 Foreground="{DynamicResource CustomFg}"
+                                 CaretBrush="{DynamicResource CustomFg}"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 VerticalScrollBarVisibility="Auto"
+                                 TextChanged="OnNoteEditorTextChanged"
+                                 Loaded="OnNoteEditorLoaded"
+                                 SizeChanged="OnNoteEditorSizeChanged"
+                                 SelectionChanged="OnNoteEditorSelectionChanged"
+                                 PreviewMouseWheel="OnNoteEditorPreviewMouseWheel"
+                                 PreviewMouseLeftButtonUp="OnNoteEditorPointerChanged"
+                                 PreviewMouseLeftButtonDown="OnNoteEditorPointerChanged"
+                                 KeyUp="OnNoteEditorKeyUp"
+                                 GotKeyboardFocus="OnNoteEditorGotKeyboardFocus"
+                                 Panel.ZIndex="1"
+                                 Opacity="1"/>
+                    </Grid>
+                </Border>
 
                 <!-- 空状态 -->
-                <StackPanel Grid.RowSpan="3" HorizontalAlignment="Center" VerticalAlignment="Center"
+                <StackPanel Grid.RowSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center"
                             Visibility="{Binding SelectedNote, Converter={StaticResource NullToVisibleConverter}}"
                             IsHitTestVisible="False">
                     <ui:SymbolIcon Symbol="Note24" FontSize="48" Opacity="0.2"/>

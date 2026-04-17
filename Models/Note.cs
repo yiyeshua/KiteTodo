@@ -20,6 +20,9 @@ public class Note
     /// <summary>笔记纯文本内容</summary>
     public string Content { get; set; } = string.Empty;
 
+    /// <summary>旧版富文本内容，保留字段以兼容历史数据</summary>
+    public string? RichContent { get; set; }
+
     /// <summary>创建时间</summary>
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 

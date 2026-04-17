@@ -41,9 +41,15 @@
                 <RadioButton x:Name="FilterAll" Content="全部" GroupName="StatusFilter"
                              IsChecked="True" Click="OnFilterChanged"
                              Style="{StaticResource {x:Type RadioButton}}" Margin="0,0,4,0"/>
-                <RadioButton x:Name="FilterActive" Content="活跃事项" GroupName="StatusFilter"
+                <RadioButton x:Name="FilterActive" GroupName="StatusFilter"
                              Click="OnFilterChanged"
-                             Style="{StaticResource {x:Type RadioButton}}" Margin="0,0,4,0"/>
+                             Style="{StaticResource {x:Type RadioButton}}" Margin="0,0,4,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="活跃事项"/>
+                        <TextBlock Text="{Binding ActiveCount, StringFormat=' ({0})'}"
+                                   Opacity="0.6" FontSize="11"/>
+                    </StackPanel>
+                </RadioButton>
                 <RadioButton x:Name="FilterPending" GroupName="StatusFilter"
                              Click="OnFilterChanged"
                              Style="{StaticResource {x:Type RadioButton}}" Margin="0,0,4,0">
@@ -103,14 +109,23 @@
                 </StackPanel>
 
                 <!-- 列表 -->
-                <ListBox ItemsSource="{Binding Items}" Background="Transparent"
+                <ListBox x:Name="BacklogListBox"
+                         ItemsSource="{Binding Items}" Background="Transparent"
                          BorderThickness="0" Padding="0"
+                         Loaded="OnBacklogListLoaded"
+                         SizeChanged="OnBacklogListSizeChanged"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="VerticalContentAlignment" Value="Top"/>
                             <Setter Property="Padding" Value="0"/>
-                            <Setter Property="Margin" Value="0,0,0,6"/>
+                            <Setter Property="Margin" Value="0,0,8,8"/>
                         </Style>
                     </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
@@ -277,8 +292,9 @@
                     <!-- 状态 -->
                     <TextBlock Text="状态" FontSize="12" Opacity="0.6" Margin="0,12,0,4"/>
                     <ComboBox x:Name="EditStatus">
-                        <ComboBoxItem Content="待处理"/>
-                        <ComboBoxItem Content="等待他人"/>
+                        <ComboBoxItem Content="待处理" Tag="0"/>
+                        <ComboBoxItem Content="等待他人" Tag="1"/>
+                        <ComboBoxItem Content="已排期" Tag="2"/>
                     </ComboBox>
 
                     <!-- 等待说明 -->

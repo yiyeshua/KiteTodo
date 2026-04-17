@@ -66,6 +66,7 @@ public partial class NotebookViewModel : ObservableObject
             var selectedId = SelectedNote.Id;
             SelectedNote.Title = EditTitle;
             SelectedNote.Content = EditContent;
+            SelectedNote.RichContent = null;
             _noteService.Update(SelectedNote);
             LoadNotes();
             SelectedNote = Notes.FirstOrDefault(n => n.Id == selectedId);
@@ -90,7 +91,8 @@ public partial class NotebookViewModel : ObservableObject
         var note = new Note
         {
             Title = "新笔记",
-            Content = string.Empty
+            Content = string.Empty,
+            RichContent = null
         };
         _noteService.Add(note);
         LoadNotes();
