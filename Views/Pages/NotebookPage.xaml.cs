@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using System.ComponentModel;
 using KiteTodo.Models;
 using KiteTodo.ViewModels;
 
@@ -24,21 +25,23 @@ public partial class NotebookPage : Page
     private const double EditorFontStep = 1;
     private const double CurrentLineMinHeight = 22;
     private ScrollViewer? _editorScrollViewer;
-    private ScrollViewer? _lineNumberScrollViewer;
     private bool _editorVisualRefreshQueued;
     private bool _lineNumberRefreshPending = true;
     private int _lastRenderedLineCount = -1;
+    private bool _isLoadingEditorText;
 
     public NotebookPage()
     {
         InitializeComponent();
         DataContext = _vm;
-        Loaded += (_, _) => RefreshLineNumbers();
+        _vm.PropertyChanged += OnViewModelPropertyChanged;
+        Loaded += (_, _) => LoadEditorFromViewModel();
     }
 
     /// <summary>点击保存按钮时保存当前笔记</summary>
     private void OnSaveNote(object sender, System.Windows.RoutedEventArgs e)
     {
+        _vm.EditContent = NoteEditor.Text ?? string.Empty;
         _vm.SaveCurrentNoteCommand.Execute(null);
     }
 
@@ -56,6 +59,31 @@ public partial class NotebookPage : Page
             _vm.ConvertToTodoCommand.Execute(note);
     }
 
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(NotebookViewModel.SelectedNote))
+            LoadEditorFromViewModel();
+    }
+
+    private void LoadEditorFromViewModel()
+    {
+        if (NoteEditor is null)
+            return;
+
+        _isLoadingEditorText = true;
+        try
+        {
+            NoteEditor.Text = _vm.EditContent ?? string.Empty;
+            NoteEditor.CaretIndex = 0;
+        }
+        finally
+        {
+            _isLoadingEditorText = false;
+        }
+
+        QueueEditorVisualRefresh(true);
+    }
+
     private void OnDecreaseFontSize(object sender, RoutedEventArgs e)
     {
         SetEditorFontSize(NoteEditor.FontSize - EditorFontStep);
@@ -71,19 +99,23 @@ public partial class NotebookPage : Page
         var size = Math.Max(MinEditorFontSize, Math.Min(MaxEditorFontSize, fontSize));
         NoteEditor.FontSize = size;
         LineNumberGutter.FontSize = size;
+        LineNumberGutter.LineHeight = GetEditorLineHeight();
+        LineNumberGutter.EditorPaddingTop = NoteEditor.Padding.Top;
         QueueEditorVisualRefresh(true);
     }
 
     private void OnNoteEditorLoaded(object sender, RoutedEventArgs e)
     {
         _editorScrollViewer = FindDescendant<ScrollViewer>(NoteEditor);
-        _lineNumberScrollViewer = FindDescendant<ScrollViewer>(LineNumberGutter);
 
         if (_editorScrollViewer != null)
         {
             _editorScrollViewer.ScrollChanged -= OnEditorScrollChanged;
             _editorScrollViewer.ScrollChanged += OnEditorScrollChanged;
         }
+
+        LineNumberGutter.LineHeight = GetEditorLineHeight();
+        LineNumberGutter.EditorPaddingTop = NoteEditor.Padding.Top;
 
         QueueEditorVisualRefresh(true);
     }
@@ -95,6 +127,9 @@ public partial class NotebookPage : Page
 
     private void OnNoteEditorTextChanged(object sender, TextChangedEventArgs e)
     {
+        if (_isLoadingEditorText)
+            return;
+
         var currentLineCount = Math.Max(1, NoteEditor.LineCount);
         QueueEditorVisualRefresh(currentLineCount != _lastRenderedLineCount);
     }
@@ -130,8 +165,7 @@ public partial class NotebookPage : Page
 
     private void OnEditorScrollChanged(object sender, ScrollChangedEventArgs e)
     {
-        if (_lineNumberScrollViewer != null)
-            _lineNumberScrollViewer.ScrollToVerticalOffset(e.VerticalOffset);
+        LineNumberGutter.VerticalOffset = e.VerticalOffset;
 
         QueueEditorVisualRefresh(false);
     }
@@ -175,12 +209,15 @@ public partial class NotebookPage : Page
 
         var lineCount = Math.Max(1, NoteEditor.LineCount);
         _lastRenderedLineCount = lineCount;
-        var numbers = string.Join(Environment.NewLine, Enumerable.Range(1, lineCount));
-        if (LineNumberGutter.Text != numbers)
-            LineNumberGutter.Text = numbers;
+        LineNumberGutter.LineCount = lineCount;
+        LineNumberGutter.LineHeight = GetEditorLineHeight();
+        LineNumberGutter.EditorPaddingTop = NoteEditor.Padding.Top;
+        LineNumberGutter.VerticalOffset = _editorScrollViewer?.VerticalOffset ?? 0;
+    }
 
-        if (_editorScrollViewer != null && _lineNumberScrollViewer != null)
-            _lineNumberScrollViewer.ScrollToVerticalOffset(_editorScrollViewer.VerticalOffset);
+    private double GetEditorLineHeight()
+    {
+        return Math.Max(CurrentLineMinHeight, NoteEditor.FontSize * 1.45);
     }
 
     private void UpdateCurrentLineHighlight()
@@ -191,7 +228,7 @@ public partial class NotebookPage : Page
         var lineIndex = NoteEditor.GetLineIndexFromCharacterIndex(NoteEditor.CaretIndex);
         if (lineIndex < 0)
         {
-            CurrentLineHighlight.Visibility = Visibility.Collapsed;
+            CurrentLineHighlight.IsHighlightVisible = false;
             return;
         }
 
@@ -225,9 +262,9 @@ public partial class NotebookPage : Page
             rect = new Rect(0, fallbackTop, Math.Max(0, NoteEditor.ActualWidth), Math.Max(CurrentLineMinHeight, NoteEditor.FontSize * 1.6));
         }
 
-        CurrentLineHighlight.Margin = new Thickness(0, Math.Max(0, rect.Top), 0, 0);
-        CurrentLineHighlight.Height = Math.Max(CurrentLineMinHeight, rect.Height);
-        CurrentLineHighlight.Visibility = Visibility.Visible;
+        CurrentLineHighlight.HighlightTop = Math.Max(0, rect.Top);
+        CurrentLineHighlight.HighlightHeight = Math.Max(CurrentLineMinHeight, rect.Height);
+        CurrentLineHighlight.IsHighlightVisible = true;
     }
 
     private static T? FindDescendant<T>(DependencyObject? root) where T : DependencyObject
