@@ -15,6 +15,7 @@ public class NoteService
 {
     private readonly DatabaseService _db = DatabaseService.Instance;
     private readonly TodoService _todoService = new();
+    private readonly BacklogService _backlogService = new();
 
     /// <summary>获取所有笔记（按修改时间倒序排列）</summary>
     public List<Note> GetAll()
@@ -69,5 +70,24 @@ public class NoteService
             Priority = 0
         };
         _todoService.Add(todo);
+    }
+
+    /// <summary>
+    /// 将笔记转化为事项池事项。
+    /// 笔记标题 → 事项标题，笔记内容 → 事项描述。
+    /// </summary>
+    public void ConvertToBacklog(int noteId)
+    {
+        var note = GetById(noteId);
+        if (note == null) return;
+
+        var backlog = new BacklogItem
+        {
+            Title = note.Title,
+            Description = note.Content,
+            Priority = 0,
+            Status = BacklogItem.StatusPending
+        };
+        _backlogService.Add(backlog);
     }
 }

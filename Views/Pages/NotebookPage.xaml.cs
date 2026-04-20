@@ -59,6 +59,13 @@ public partial class NotebookPage : Page
             _vm.ConvertToTodoCommand.Execute(note);
     }
 
+    /// <summary>右键菜单 → 转入事项池</summary>
+    private void OnConvertToBacklog(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem mi && mi.DataContext is Note note)
+            _vm.ConvertToBacklogCommand.Execute(note);
+    }
+
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(NotebookViewModel.SelectedNote))

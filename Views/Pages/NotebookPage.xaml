@@ -35,7 +35,7 @@
                            Padding="12,12,12,8" Foreground="{DynamicResource CustomFg}"/>
 
                 <!-- 笔记列表 -->
-                <ListBox Grid.Row="1" ItemsSource="{Binding Notes}"
+                <ListBox Grid.Row="1" ItemsSource="{Binding PagedNotes}"
                          SelectedItem="{Binding SelectedNote}"
                          Background="Transparent" BorderThickness="0"
                          Padding="4,0,4,4">
@@ -57,6 +57,9 @@
                                         <MenuItem Header="转化为待办"
                                                   Icon="{ui:SymbolIcon ClipboardTaskListLtr24}"
                                                   Click="OnConvertToTodo"/>
+                                        <MenuItem Header="转入事项池"
+                                                  Icon="{ui:SymbolIcon Archive24}"
+                                                  Click="OnConvertToBacklog"/>
                                         <Separator/>
                                         <MenuItem Header="删除"
                                                   Icon="{ui:SymbolIcon Delete24}"
@@ -72,10 +75,34 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <!-- 新建按钮 -->
-                <ui:Button Grid.Row="2" Content="+ 新建笔记" Appearance="Primary"
-                           Command="{Binding CreateNoteCommand}"
-                           Margin="8,0,8,8" HorizontalAlignment="Stretch"/>
+                <!-- 底部操作 -->
+                <StackPanel Grid.Row="2" Margin="8,0,8,8">
+                    <DockPanel Margin="0,0,0,8">
+                        <ui:Button DockPanel.Dock="Left"
+                                   Content="◀"
+                                   Appearance="Secondary"
+                                   Width="36"
+                                   Padding="0"
+                                   Command="{Binding GoPreviousPageCommand}"
+                                   IsEnabled="{Binding CanGoPreviousPage}"/>
+                        <ui:Button DockPanel.Dock="Right"
+                                   Content="▶"
+                                   Appearance="Secondary"
+                                   Width="36"
+                                   Padding="0"
+                                   Command="{Binding GoNextPageCommand}"
+                                   IsEnabled="{Binding CanGoNextPage}"/>
+                        <TextBlock Text="{Binding PageInfo}"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   Foreground="{DynamicResource CustomFgSecondary}"/>
+                    </DockPanel>
+
+                    <ui:Button Content="+ 新建笔记" Appearance="Primary"
+                               Command="{Binding CreateNoteCommand}"
+                               HorizontalAlignment="Stretch"/>
+                </StackPanel>
             </Grid>
         </Border>
 
