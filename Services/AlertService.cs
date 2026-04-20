@@ -154,4 +154,84 @@ public static class AlertService
             // 静默忽略
         }
     }
+
+    /// <summary>
+    /// 在屏幕右下角显示一个轻量提示，适合轻反馈而非强提醒。
+    /// </summary>
+    public static void ShowCornerToast(string message, int durationSeconds = 2)
+    {
+        try
+        {
+            var screen = SystemParameters.WorkArea;
+            const double width = 300;
+            const double height = 72;
+            const double margin = 20;
+
+            var toast = new Window
+            {
+                WindowStyle = WindowStyle.None,
+                AllowsTransparency = true,
+                Background = Brushes.Transparent,
+                Topmost = true,
+                ShowInTaskbar = false,
+                ShowActivated = false,
+                Width = width,
+                Height = height,
+                Left = screen.Right - width - margin,
+                Top = screen.Bottom - height - margin,
+                ResizeMode = ResizeMode.NoResize
+            };
+
+            var border = new Border
+            {
+                CornerRadius = new CornerRadius(14),
+                Background = new SolidColorBrush(Color.FromArgb(242, 40, 44, 52)),
+                Padding = new Thickness(18, 14, 18, 14),
+                Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    BlurRadius = 18,
+                    ShadowDepth = 4,
+                    Opacity = 0.24,
+                    Color = Colors.Black
+                }
+            };
+
+            border.Child = new TextBlock
+            {
+                Text = message,
+                FontSize = 14,
+                Foreground = Brushes.White,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextWrapping = TextWrapping.Wrap
+            };
+
+            toast.Content = border;
+
+            toast.Opacity = 0;
+            toast.Loaded += (_, _) =>
+            {
+                var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180))
+                {
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+                };
+                toast.BeginAnimation(UIElement.OpacityProperty, fadeIn);
+            };
+
+            var autoClose = new DispatcherTimer { Interval = TimeSpan.FromSeconds(durationSeconds) };
+            autoClose.Tick += (_, _) =>
+            {
+                autoClose.Stop();
+                var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(220));
+                fadeOut.Completed += (_, _) => toast.Close();
+                toast.BeginAnimation(UIElement.OpacityProperty, fadeOut);
+            };
+            autoClose.Start();
+
+            toast.Show();
+        }
+        catch
+        {
+            // 静默忽略
+        }
+    }
 }

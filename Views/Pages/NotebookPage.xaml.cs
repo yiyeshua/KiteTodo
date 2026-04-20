@@ -9,7 +9,9 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using System.ComponentModel;
 using KiteTodo.Models;
+using KiteTodo.Services;
 using KiteTodo.ViewModels;
+using KiteTodo.Views;
 
 namespace KiteTodo.Views.Pages;
 
@@ -63,7 +65,27 @@ public partial class NotebookPage : Page
     private void OnConvertToBacklog(object sender, RoutedEventArgs e)
     {
         if (sender is MenuItem mi && mi.DataContext is Note note)
-            _vm.ConvertToBacklogCommand.Execute(note);
+        {
+            var choice = ShowBacklogTransferDialog(note);
+
+            if (choice == BacklogTransferDialog.TransferChoice.Cancel)
+                return;
+
+            var deleteAfterTransfer = choice == BacklogTransferDialog.TransferChoice.Move;
+            _vm.MoveNoteToBacklog(note, deleteAfterTransfer);
+            AlertService.ShowCornerToast(deleteAfterTransfer ? "已移动到事项池" : "已复制到事项池");
+        }
+    }
+
+    private BacklogTransferDialog.TransferChoice ShowBacklogTransferDialog(Note note)
+    {
+        var dialog = new BacklogTransferDialog(note.Title)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        dialog.ShowDialog();
+        return dialog.SelectedChoice;
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

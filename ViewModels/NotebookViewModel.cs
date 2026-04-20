@@ -155,11 +155,7 @@ public partial class NotebookViewModel : ObservableObject
     [RelayCommand]
     private void ConvertToBacklog(Note note)
     {
-        _noteService.ConvertToBacklog(note.Id);
-        _noteService.Delete(note.Id);
-        LoadNotes();
-        if (SelectedNote?.Id == note.Id)
-            SelectedNote = null;
+        MoveNoteToBacklog(note, deleteAfterTransfer: true);
     }
 
     [RelayCommand(CanExecute = nameof(CanGoPreviousPage))]
@@ -194,7 +190,7 @@ public partial class NotebookViewModel : ObservableObject
             .ToList();
 
         PagedNotes = new ObservableCollection<Note>(pageItems);
-        PageInfo = $"第 {PageIndex + 1} / {totalPages} 页";
+        PageInfo = $"第 {PageIndex + 1} / {totalPages} 页，共 {Notes.Count} 条";
         CanGoPreviousPage = PageIndex > 0;
         CanGoNextPage = PageIndex < totalPages - 1;
         GoPreviousPageCommand.NotifyCanExecuteChanged();
@@ -221,5 +217,19 @@ public partial class NotebookViewModel : ObservableObject
 
         PageIndex = targetPage;
         RefreshPagedNotes();
+    }
+
+    public void MoveNoteToBacklog(Note note, bool deleteAfterTransfer)
+    {
+        _noteService.ConvertToBacklog(note.Id);
+
+        if (deleteAfterTransfer)
+            _noteService.Delete(note.Id);
+
+        LoadNotes(deleteAfterTransfer ? null : note.Id);
+        if (deleteAfterTransfer && SelectedNote?.Id == note.Id)
+            SelectedNote = null;
+        else if (!deleteAfterTransfer)
+            SelectedNote = Notes.FirstOrDefault(n => n.Id == note.Id);
     }
 }
