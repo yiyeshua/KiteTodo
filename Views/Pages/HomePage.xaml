@@ -236,6 +236,8 @@
                         <ui:Card.ContextMenu>
                             <ContextMenu>
                                 <MenuItem Header="移动到"/>
+                                <MenuItem Header="复制到"/>
+                                <MenuItem Header="转入事项池" Click="OnMoveToBacklog"/>
                                 <MenuItem Header="开始专注" Click="OnStartFocus"/>
                                 <Separator/>
                                 <MenuItem Header="标记待验证" Click="OnToggleVerification"/>

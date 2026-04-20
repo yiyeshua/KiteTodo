@@ -62,6 +62,21 @@ public class BacklogService
         _db.Backlogs.Delete(id);
     }
 
+    /// <summary>将待办事项转入事项池，并返回新建的事项。</summary>
+    public BacklogItem AddFromTodo(TodoItem todo)
+    {
+        var backlog = new BacklogItem
+        {
+            Title = todo.Title,
+            Description = todo.Description,
+            Priority = todo.Priority,
+            Category = todo.Category,
+            Status = BacklogItem.StatusPending
+        };
+
+        return Add(backlog);
+    }
+
     /// <summary>
     /// 将事项池事项转为待办事项（排期到指定日期）。
     /// 事项标题→待办标题，事项描述→待办描述，并记录关联。

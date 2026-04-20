@@ -59,6 +59,29 @@ public class TodoService
         _db.Todos.Update(item);
     }
 
+    /// <summary>复制待办到指定日期，返回新建的待办对象。</summary>
+    public TodoItem? CopyToDate(int id, DateTime targetDate)
+    {
+        var source = _db.Todos.FindById(id);
+        if (source == null) return null;
+
+        var copy = new TodoItem
+        {
+            Title = source.Title,
+            Description = source.Description,
+            ScheduledDate = targetDate.Date,
+            Priority = source.Priority,
+            Progress = source.IsCompleted ? 0 : source.Progress,
+            Category = source.Category,
+            ReminderTime = null,
+            SortOrder = source.SortOrder,
+            PomodoroCount = 0,
+            NeedsVerification = source.NeedsVerification
+        };
+
+        return Add(copy);
+    }
+
     /// <summary>根据 ID 永久删除待办事项</summary>
     public void Delete(int id)
     {

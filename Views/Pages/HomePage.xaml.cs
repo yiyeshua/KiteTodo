@@ -292,8 +292,8 @@ public partial class HomePage : Page
     // ---- 右键菜单：移动待办到本周其他天 ----
 
     /// <summary>
-    /// 右键菜单打开时动态生成"移动到"子菜单项。
-    /// 遍历当前周栏的 7 天，排除待办当前所在的那一天，其余天作为可选目标。
+    /// 右键菜单打开时动态生成"移动到"和"复制到"子菜单项。
+    /// 支持当前选中周和下一周，满足跨周延后或承接的场景。
     /// </summary>
     private void OnTodoContextMenuOpening(object sender, ContextMenuEventArgs e)
     {
@@ -303,38 +303,72 @@ public partial class HomePage : Page
         var contextMenu = element.ContextMenu;
         if (contextMenu == null) return;
 
-        // 找到"移动到"菜单项（ContextMenu 中的第一项）
         if (contextMenu.Items[0] is not MenuItem moveToItem) return;
+        if (contextMenu.Items[1] is not MenuItem copyToItem) return;
 
-        // 清除旧的子菜单项
-        moveToItem.Items.Clear();
-
-        // 遍历周栏中的 7 天，为每一天生成子菜单（排除待办当前所在天）
-        foreach (var day in _vm.WeekDays)
-        {
-            if (day.Date.Date == todoItem.ScheduledDate.Date)
-                continue;  // 跳过当前天
-
-            var menuItem = new MenuItem
-            {
-                Header = $"{day.DayName} ({day.DateLabel})",
-                Tag = day.Date  // 将目标日期存在 Tag 中
-            };
-            menuItem.Click += (s, _) =>
-            {
-                if (s is MenuItem mi && mi.Tag is DateTime targetDate)
-                {
-                    _vm.MoveTodo(todoItem, targetDate);
-                }
-            };
-            moveToItem.Items.Add(menuItem);
-        }
+        PopulateDateMenu(moveToItem, todoItem, copyMode: false);
+        PopulateDateMenu(copyToItem, todoItem, copyMode: true);
 
         // 更新"待验证"菜单项文本
-        if (contextMenu.Items[3] is MenuItem verifyItem)
+        if (contextMenu.Items[5] is MenuItem verifyItem)
         {
             verifyItem.Header = todoItem.NeedsVerification ? "取消待验证" : "标记待验证";
         }
+    }
+
+    private void PopulateDateMenu(MenuItem parent, TodoItem todoItem, bool copyMode)
+    {
+        parent.Items.Clear();
+
+        var currentWeekStart = GetWeekStart(_vm.SelectedDate);
+        parent.Items.Add(CreateWeekMenuGroup(copyMode ? "复制到本周" : "移动到本周", currentWeekStart, todoItem, copyMode));
+        parent.Items.Add(CreateWeekMenuGroup(copyMode ? "复制到下周" : "移动到下周", currentWeekStart.AddDays(7), todoItem, copyMode));
+    }
+
+    private MenuItem CreateWeekMenuGroup(string header, DateTime weekStart, TodoItem todoItem, bool copyMode)
+    {
+        var group = new MenuItem { Header = header };
+        string[] dayNames = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+
+        for (var index = 0; index < 7; index++)
+        {
+            var targetDate = weekStart.AddDays(index).Date;
+            if (!copyMode && targetDate == todoItem.ScheduledDate.Date)
+                continue;
+
+            var item = new MenuItem
+            {
+                Header = $"{dayNames[index]} ({targetDate:MM-dd})",
+                Tag = targetDate
+            };
+
+            item.Click += (_, _) =>
+            {
+                if (copyMode)
+                    _vm.CopyTodo(todoItem, targetDate);
+                else
+                    _vm.MoveTodo(todoItem, targetDate);
+            };
+
+            group.Items.Add(item);
+        }
+
+        if (group.Items.Count == 0)
+        {
+            group.Items.Add(new MenuItem
+            {
+                Header = "无可用日期",
+                IsEnabled = false
+            });
+        }
+
+        return group;
+    }
+
+    private static DateTime GetWeekStart(DateTime date)
+    {
+        var diff = date.DayOfWeek == DayOfWeek.Sunday ? 6 : (int)date.DayOfWeek - 1;
+        return date.Date.AddDays(-diff);
     }
 
     // ---- 右键菜单：开始专注 ----
@@ -367,6 +401,16 @@ public partial class HomePage : Page
             && el.DataContext is TodoItem item)
         {
             _vm.ToggleVerificationCommand.Execute(item);
+        }
+    }
+
+    private void OnMoveToBacklog(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem mi && mi.Parent is ContextMenu cm
+            && cm.PlacementTarget is FrameworkElement el
+            && el.DataContext is TodoItem item)
+        {
+            _vm.MoveTodoToBacklog(item);
         }
     }
 }

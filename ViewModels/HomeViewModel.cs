@@ -51,6 +51,7 @@ public class WeekDay
 public partial class HomeViewModel : ObservableObject
 {
     private readonly TodoService _todoService = new();
+    private readonly BacklogService _backlogService = new();
     private readonly DatabaseService _db = DatabaseService.Instance;
 
     /// <summary>预定义标签列表</summary>
@@ -265,6 +266,24 @@ public partial class HomeViewModel : ObservableObject
         if (todo == null) return;
         todo.ScheduledDate = targetDate.Date;
         _todoService.Update(todo);
+        LoadTodos();
+    }
+
+    /// <summary>复制待办到指定日期。</summary>
+    public void CopyTodo(TodoItem item, DateTime targetDate)
+    {
+        _todoService.CopyToDate(item.Id, targetDate);
+        LoadTodos();
+    }
+
+    /// <summary>将待办转入事项池，并从当前待办列表移除。</summary>
+    public void MoveTodoToBacklog(TodoItem item)
+    {
+        var todo = _todoService.GetById(item.Id);
+        if (todo == null) return;
+
+        _backlogService.AddFromTodo(todo);
+        _todoService.Delete(todo.Id);
         LoadTodos();
     }
 
