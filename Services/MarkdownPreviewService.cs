@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using Markdig;
 
 namespace KiteTodo.Services;
@@ -11,18 +12,21 @@ public class MarkdownPreviewService
         .UseAdvancedExtensions()
         .Build();
 
-    public string RenderFile(string filePath)
+    public string RenderFile(string filePath, int zoomPercent = 118, bool showOutline = true)
     {
         var markdown = File.ReadAllText(filePath, Encoding.UTF8);
-        return RenderHtml(markdown, filePath);
+        return RenderHtml(markdown, filePath, zoomPercent, showOutline);
     }
 
-    public string RenderHtml(string markdown, string? filePath = null)
+    public string RenderHtml(string markdown, string? filePath = null, int zoomPercent = 118, bool showOutline = true)
     {
         var body = Markdown.ToHtml(markdown ?? string.Empty, _pipeline);
         var title = string.IsNullOrWhiteSpace(filePath)
             ? "Markdown 阅读"
             : Path.GetFileName(filePath);
+        var safeZoom = Math.Clamp(zoomPercent, 85, 200);
+        var zoomValue = (safeZoom / 100d).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        var showOutlineScriptValue = showOutline ? "true" : "false";
 
         var baseHref = string.Empty;
         if (!string.IsNullOrWhiteSpace(filePath))
@@ -41,25 +45,134 @@ public class MarkdownPreviewService
     <title>{{WebUtility.HtmlEncode(title)}}</title>
     {{baseHref}}
     <style>
+        html {
+            background: #f6f7fb;
+            scroll-behavior: smooth;
+        }
+
         body {
             margin: 0;
-            padding: 28px 32px 80px;
+            padding: 8px 10px 24px;
             background: #f6f7fb;
             color: #1f2937;
             font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
             line-height: 1.7;
-            font-size: 15px;
+            font-size: 16px;
+            zoom: {{zoomValue}};
         }
 
         .page {
-            max-width: 920px;
-            margin: 0 auto;
+            box-sizing: border-box;
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            position: relative;
             background: #ffffff;
             border: 1px solid #e5e7eb;
             border-radius: 16px;
             box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
-            padding: 28px 34px;
+            padding: 24px 28px 30px;
         }
+
+        .reader-shell {
+            display: block;
+        }
+
+        .page.with-toc .article {
+            margin-right: 212px;
+        }
+
+        .page.without-toc .article {
+            margin-right: 0;
+        }
+
+        .article {
+            min-width: 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .toc {
+            width: 176px;
+            position: fixed;
+            right: 14px;
+            top: 12px;
+            bottom: 12px;
+            padding: 12px 10px 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            background: #f8fafc;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+            overflow-y: auto;
+            box-sizing: border-box;
+            z-index: 5;
+        }
+
+        .toc.is-hidden {
+            display: none;
+        }
+
+        .toc-title {
+            margin: 0 0 10px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .toc-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .toc-item {
+            margin: 0;
+            padding: 0;
+        }
+
+        .toc-link {
+            position: relative;
+            display: block;
+            padding: 4px 6px 4px 10px;
+            border-radius: 8px;
+            color: #334155;
+            text-decoration: none;
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.45;
+            font-size: 11px;
+        }
+
+        .toc-link::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 4px;
+            bottom: 4px;
+            width: 3px;
+            border-radius: 999px;
+            background: transparent;
+            transition: background-color 0.18s ease;
+        }
+
+        .toc-link:hover {
+            background: #e8f0fe;
+            text-decoration: none;
+        }
+
+        .toc-link.is-active {
+            background: #dbeafe;
+            color: #0b57d0;
+            font-weight: 600;
+        }
+
+        .toc-link.is-active::before {
+            background: #0b57d0;
+        }
+
+        .toc-level-2 { padding-left: 14px; }
+        .toc-level-3 { padding-left: 22px; }
+        .toc-level-4 { padding-left: 30px; }
 
         h1, h2, h3, h4, h5, h6 {
             margin-top: 1.5em;
@@ -68,11 +181,11 @@ public class MarkdownPreviewService
             line-height: 1.3;
         }
 
-        h1 { font-size: 30px; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.35em; }
-        h2 { font-size: 24px; border-bottom: 1px solid #eef2f7; padding-bottom: 0.25em; }
-        h3 { font-size: 20px; }
+        h1 { font-size: 34px; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.35em; }
+        h2 { font-size: 27px; border-bottom: 1px solid #eef2f7; padding-bottom: 0.25em; }
+        h3 { font-size: 22px; }
 
-        p, ul, ol, blockquote, pre, table {
+        p, ul, ol, blockquote, pre, .table-wrap {
             margin-top: 0.8em;
             margin-bottom: 0.8em;
         }
@@ -111,17 +224,30 @@ public class MarkdownPreviewService
             border-radius: 8px;
         }
 
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            background: #ffffff;
+            box-sizing: border-box;
+        }
+
         table {
             border-collapse: collapse;
-            width: 100%;
-            overflow: hidden;
-            border-radius: 10px;
+            width: max-content;
+            min-width: 100%;
+            table-layout: auto;
         }
 
         th, td {
             border: 1px solid #e5e7eb;
             padding: 10px 12px;
             text-align: left;
+            vertical-align: top;
+            white-space: normal;
+            word-break: break-word;
         }
 
         th {
@@ -169,15 +295,196 @@ public class MarkdownPreviewService
             for (var i = 0; i < checkboxes.length; i++) {
                 checkboxes[i].removeAttribute('disabled');
             }
+
+            var tables = document.querySelectorAll('table');
+            for (var tableIndex = 0; tableIndex < tables.length; tableIndex++) {
+                var table = tables[tableIndex];
+                if (table.parentElement && table.parentElement.classList && table.parentElement.classList.contains('table-wrap')) {
+                    continue;
+                }
+
+                var wrapper = document.createElement('div');
+                wrapper.className = 'table-wrap';
+                var parent = table.parentNode;
+                if (!parent) {
+                    continue;
+                }
+
+                parent.insertBefore(wrapper, table);
+                wrapper.appendChild(table);
+            }
+
+            document.addEventListener('wheel', function (event) {
+                if (!event.ctrlKey) {
+                    return;
+                }
+
+                event.preventDefault();
+                if (window.chrome && window.chrome.webview) {
+                    window.chrome.webview.postMessage({
+                        type: 'zoom-wheel',
+                        delta: event.deltaY < 0 ? 1 : -1
+                    });
+                }
+            }, { passive: false });
+
+            var page = document.getElementById('page');
+            var article = document.getElementById('article');
+            var toc = document.getElementById('toc');
+            var tocList = document.getElementById('toc-list');
+            var shouldShowOutline = {{showOutlineScriptValue}};
+            if (!page || !article || !toc || !tocList) {
+                return;
+            }
+
+            var headings = article.querySelectorAll('h1, h2, h3, h4');
+            if (!shouldShowOutline || !headings || headings.length < 3) {
+                toc.className += ' is-hidden';
+                page.className += ' without-toc';
+                return;
+            }
+
+            page.className += ' with-toc';
+
+            var links = [];
+            function addClass(element, className) {
+                if ((' ' + element.className + ' ').indexOf(' ' + className + ' ') < 0) {
+                    element.className = (element.className ? element.className + ' ' : '') + className;
+                }
+            }
+
+            function removeClass(element, className) {
+                element.className = (' ' + element.className + ' ')
+                    .replace(' ' + className + ' ', ' ')
+                    .replace(/^\s+|\s+$/g, '');
+            }
+
+            function getScrollTop() {
+                return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+            }
+
+            function setScrollTop(value) {
+                document.documentElement.scrollTop = value;
+                document.body.scrollTop = value;
+            }
+
+            function getElementTop(element) {
+                var top = 0;
+                while (element) {
+                    top += element.offsetTop || 0;
+                    element = element.offsetParent;
+                }
+                return top;
+            }
+
+            function smoothScrollTo(targetY) {
+                var startY = getScrollTop();
+                var distance = targetY - startY;
+                var duration = 220;
+                var startTime = new Date().getTime();
+
+                function step() {
+                    var now = new Date().getTime();
+                    var progress = Math.min((now - startTime) / duration, 1);
+                    var eased = 1 - Math.pow(1 - progress, 3);
+                    setScrollTop(startY + distance * eased);
+                    if (progress < 1) {
+                        window.setTimeout(step, 16);
+                    }
+                }
+
+                step();
+            }
+
+            for (var j = 0; j < headings.length; j++) {
+                var heading = headings[j];
+                var headingId = heading.getAttribute('id');
+                if (!headingId) {
+                    headingId = 'toc-heading-' + j;
+                    heading.setAttribute('id', headingId);
+                }
+
+                var item = document.createElement('li');
+                item.className = 'toc-item';
+
+                var link = document.createElement('a');
+                link.className = 'toc-link toc-level-' + heading.tagName.substring(1);
+                link.href = '#' + headingId;
+                link.innerText = heading.innerText || heading.textContent || ('标题 ' + (j + 1));
+                link.addEventListener('click', function (event) {
+                    event.preventDefault();
+
+                    var targetId = this.getAttribute('href');
+                    if (!targetId) {
+                        return;
+                    }
+
+                    var target = document.querySelector(targetId);
+                    if (!target) {
+                        return;
+                    }
+
+                    smoothScrollTo(Math.max(getElementTop(target) - 12, 0));
+                    if (history && history.replaceState) {
+                        history.replaceState(null, '', targetId);
+                    }
+                });
+
+                item.appendChild(link);
+                tocList.appendChild(item);
+                links.push(link);
+            }
+
+            function updateActiveHeading() {
+                var activeIndex = 0;
+                for (var k = 0; k < headings.length; k++) {
+                    var rect = headings[k].getBoundingClientRect();
+                    if (rect.top <= 140) {
+                        activeIndex = k;
+                    } else {
+                        break;
+                    }
+                }
+
+                for (var m = 0; m < links.length; m++) {
+                    if (m === activeIndex) {
+                        addClass(links[m], 'is-active');
+                        if (links[m].scrollIntoView) {
+                            links[m].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                        }
+                    } else {
+                        removeClass(links[m], 'is-active');
+                    }
+                }
+            }
+
+            updateActiveHeading();
+            window.addEventListener('scroll', updateActiveHeading);
         });
     </script>
 </head>
 <body>
-    <div class="page">
-        {{body}}
+    <div class="page" id="page">
+        <div class="reader-shell">
+            <div class="article" id="article">
+                {{body}}
+            </div>
+            <aside class="toc" id="toc">
+                <div class="toc-title">目录</div>
+                <ul class="toc-list" id="toc-list"></ul>
+            </aside>
+        </div>
     </div>
 </body>
 </html>
 """;
+    }
+
+    public int CountOutlineHeadings(string markdown)
+    {
+        if (string.IsNullOrWhiteSpace(markdown))
+            return 0;
+
+        return Regex.Matches(markdown, @"^#{1,4}\s+\S+", RegexOptions.Multiline).Count;
     }
 }

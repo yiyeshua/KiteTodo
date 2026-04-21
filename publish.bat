@@ -46,4 +46,13 @@ echo   打包完成！
 echo   输出文件: KiteTodo-Release.exe
 echo ========================================
 echo.
-pause
+echo 按任意键启动最新编译的程序...
+pause >nul
+
+if exist "%~dp0KiteTodo-Release.exe" (
+  start "" "%~dp0KiteTodo-Release.exe"
+) else (
+  echo [错误] 未找到输出文件: KiteTodo-Release.exe
+  pause
+  exit /b 1
+)

@@ -2,12 +2,42 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
       Title="Markdown 阅读"
       Language="zh-CN"
       AllowDrop="True"
     PreviewKeyDown="OnPreviewKeyDown"
       DragOver="OnDragOver"
       Drop="OnDropFile">
+
+    <Page.Resources>
+        <Style x:Key="HelpCardStyle" TargetType="Border">
+            <Setter Property="Margin" Value="0,8,0,0"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Background" Value="{DynamicResource CustomSubtleBg}"/>
+        </Style>
+
+        <Style x:Key="HelpTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+
+        <Style x:Key="HelpSnippetStyle" TargetType="TextBox">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="AcceptsReturn" Value="True"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,4,0,0"/>
+            <Setter Property="FontFamily" Value="Cascadia Code,Consolas,Microsoft YaHei UI"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Foreground" Value="{DynamicResource CustomFg}"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+        </Style>
+    </Page.Resources>
 
     <Grid Margin="24,16">
         <Grid.RowDefinitions>
@@ -38,6 +68,13 @@
                            Foreground="{DynamicResource CustomFgSecondary}"/>
 
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                    <ui:Button x:Name="ZoomOutButton" Content="A-" Appearance="Secondary" Click="OnZoomOut" Padding="10,6" FontSize="12" Margin="0,0,6,0"/>
+                    <Border Padding="8,4" Margin="0,0,6,0" CornerRadius="8" Background="{DynamicResource CustomSubtleBg}" BorderBrush="{DynamicResource CustomSubtleBorder}" BorderThickness="1">
+                        <TextBlock x:Name="ZoomText" Text="118%" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource CustomFgSecondary}"/>
+                    </Border>
+                    <ui:Button x:Name="ZoomInButton" Content="A+" Appearance="Secondary" Click="OnZoomIn" Padding="10,6" FontSize="12" Margin="0,0,8,0"/>
+                    <ui:Button x:Name="ToggleOutlineButton" Content="隐藏目录" Appearance="Secondary" Click="OnToggleOutline" Visibility="Collapsed" Margin="0,0,8,0" Padding="12,6" FontSize="12"/>
+                    <ui:Button x:Name="ToggleHelpButton" Content="显示语法" Appearance="Secondary" Click="OnToggleHelp" Visibility="Collapsed" Margin="0,0,8,0" Padding="12,6" FontSize="12"/>
                     <ui:Button x:Name="ToggleModeButton" Content="查看源码" Appearance="Secondary" Click="OnToggleMode" IsEnabled="False" Margin="0,0,8,0" Padding="12,6" FontSize="12"/>
                     <ui:Button Content="打开文件" Appearance="Primary" Click="OnOpenFile" Margin="0,0,8,0" Padding="14,6" FontSize="12"/>
                     <ui:Button x:Name="SaveButton" Content="保存" Appearance="Secondary" Click="OnSaveFile" IsEnabled="False" Margin="0,0,8,0" Padding="12,6" FontSize="12"/>
@@ -74,7 +111,7 @@
                     Background="White"
                     BorderThickness="1"
                     BorderBrush="{DynamicResource CustomSubtleBorder}">
-                <WebBrowser x:Name="PreviewBrowser"/>
+                <wv2:WebView2 x:Name="PreviewBrowser"/>
             </Border>
 
             <Border x:Name="SourceHost"
@@ -85,9 +122,9 @@
                     BorderBrush="{DynamicResource CustomSubtleBorder}">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="2.3*"/>
-                        <ColumnDefinition Width="1"/>
-                        <ColumnDefinition Width="1.1*"/>
+                        <ColumnDefinition x:Name="SourceEditorColumn" Width="2.75*"/>
+                        <ColumnDefinition x:Name="SourceDividerColumn" Width="0"/>
+                        <ColumnDefinition x:Name="SourceHelpColumn" Width="0"/>
                     </Grid.ColumnDefinitions>
 
                     <TextBox x:Name="SourceTextBox"
@@ -105,78 +142,98 @@
                              FontSize="13"
                              TextChanged="OnSourceTextChanged"/>
 
-                    <Border Grid.Column="1"
+                    <Border x:Name="SourceDivider"
+                            Grid.Column="1"
+                            Visibility="Collapsed"
                             Width="1"
                             Background="{DynamicResource CustomSubtleBorder}"/>
 
-                    <ScrollViewer Grid.Column="2"
+                    <ScrollViewer x:Name="SourceHelpPanel"
+                                  Grid.Column="2"
+                                  Visibility="Collapsed"
                                   VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel Margin="16,14,16,16">
-                            <TextBlock Text="Markdown 常用语法" FontSize="16" FontWeight="SemiBold"
+                        <StackPanel Margin="12,10,12,12">
+                            <TextBlock Text="Markdown 常用语法" FontSize="15" FontWeight="SemiBold"
                                        Foreground="{DynamicResource CustomFg}"/>
 
-                            <Border Margin="0,12,0,0" Padding="10" CornerRadius="8"
-                                    Background="{DynamicResource CustomSubtleBg}">
+                            <Border Style="{StaticResource HelpCardStyle}">
                                 <StackPanel>
-                                    <TextBlock Text="标题" FontWeight="SemiBold"/>
-                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="# 一级标题&#10;## 二级标题&#10;### 三级标题"/>
+                                    <DockPanel>
+                                        <TextBlock Text="标题" Style="{StaticResource HelpTitleStyle}"/>
+                                        <ui:Button DockPanel.Dock="Right" Content="复制" Tag="# 一级标题&#10;## 二级标题&#10;### 三级标题" Click="OnCopyHelpSnippet" Padding="8,2" FontSize="11" Appearance="Secondary"/>
+                                    </DockPanel>
+                                    <TextBox Style="{StaticResource HelpSnippetStyle}" Text="# 一级标题&#10;## 二级标题&#10;### 三级标题"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Margin="0,10,0,0" Padding="10" CornerRadius="8"
-                                    Background="{DynamicResource CustomSubtleBg}">
+                            <Border Style="{StaticResource HelpCardStyle}">
                                 <StackPanel>
-                                    <TextBlock Text="列表" FontWeight="SemiBold"/>
-                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="- 无序项&#10;- 第二项&#10;&#10;1. 有序项&#10;2. 第二项"/>
+                                    <DockPanel>
+                                        <TextBlock Text="列表" Style="{StaticResource HelpTitleStyle}"/>
+                                        <ui:Button DockPanel.Dock="Right" Content="复制" Tag="- 无序项&#10;- 第二项&#10;&#10;1. 有序项&#10;2. 第二项" Click="OnCopyHelpSnippet" Padding="8,2" FontSize="11" Appearance="Secondary"/>
+                                    </DockPanel>
+                                    <TextBox Style="{StaticResource HelpSnippetStyle}" Text="- 无序项&#10;- 第二项&#10;&#10;1. 有序项&#10;2. 第二项"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Margin="0,10,0,0" Padding="10" CornerRadius="8"
-                                    Background="{DynamicResource CustomSubtleBg}">
+                            <Border Style="{StaticResource HelpCardStyle}">
                                 <StackPanel>
-                                    <TextBlock Text="任务列表" FontWeight="SemiBold"/>
-                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="- [ ] 待完成&#10;- [x] 已完成"/>
+                                    <DockPanel>
+                                        <TextBlock Text="任务列表" Style="{StaticResource HelpTitleStyle}"/>
+                                        <ui:Button DockPanel.Dock="Right" Content="复制" Tag="- [ ] 待完成&#10;- [x] 已完成" Click="OnCopyHelpSnippet" Padding="8,2" FontSize="11" Appearance="Secondary"/>
+                                    </DockPanel>
+                                    <TextBox Style="{StaticResource HelpSnippetStyle}" Text="- [ ] 待完成&#10;- [x] 已完成"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Margin="0,10,0,0" Padding="10" CornerRadius="8"
-                                    Background="{DynamicResource CustomSubtleBg}">
+                            <Border Style="{StaticResource HelpCardStyle}">
                                 <StackPanel>
-                                    <TextBlock Text="强调" FontWeight="SemiBold"/>
-                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="**加粗**&#10;*斜体*&#10;`行内代码`"/>
+                                    <DockPanel>
+                                        <TextBlock Text="强调" Style="{StaticResource HelpTitleStyle}"/>
+                                        <ui:Button DockPanel.Dock="Right" Content="复制" Tag="**加粗**&#10;*斜体*&#10;`行内代码`" Click="OnCopyHelpSnippet" Padding="8,2" FontSize="11" Appearance="Secondary"/>
+                                    </DockPanel>
+                                    <TextBox Style="{StaticResource HelpSnippetStyle}" Text="**加粗**&#10;*斜体*&#10;`行内代码`"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Margin="0,10,0,0" Padding="10" CornerRadius="8"
-                                    Background="{DynamicResource CustomSubtleBg}">
+                            <Border Style="{StaticResource HelpCardStyle}">
                                 <StackPanel>
-                                    <TextBlock Text="链接和图片" FontWeight="SemiBold"/>
-                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="[链接文字](https://example.com)&#10;![图片说明](image.png)"/>
+                                    <DockPanel>
+                                        <TextBlock Text="链接和图片" Style="{StaticResource HelpTitleStyle}"/>
+                                        <ui:Button DockPanel.Dock="Right" Content="复制" Tag="[链接文字](https://example.com)&#10;![图片说明](image.png)" Click="OnCopyHelpSnippet" Padding="8,2" FontSize="11" Appearance="Secondary"/>
+                                    </DockPanel>
+                                    <TextBox Style="{StaticResource HelpSnippetStyle}" Text="[链接文字](https://example.com)&#10;![图片说明](image.png)"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Margin="0,10,0,0" Padding="10" CornerRadius="8"
-                                    Background="{DynamicResource CustomSubtleBg}">
+                            <Border Style="{StaticResource HelpCardStyle}">
                                 <StackPanel>
-                                    <TextBlock Text="引用和分隔线" FontWeight="SemiBold"/>
-                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="> 这是一段引用&#10;&#10;---"/>
+                                    <DockPanel>
+                                        <TextBlock Text="引用和分隔线" Style="{StaticResource HelpTitleStyle}"/>
+                                        <ui:Button DockPanel.Dock="Right" Content="复制" Tag="> 这是一段引用&#10;&#10;---" Click="OnCopyHelpSnippet" Padding="8,2" FontSize="11" Appearance="Secondary"/>
+                                    </DockPanel>
+                                    <TextBox Style="{StaticResource HelpSnippetStyle}" Text="> 这是一段引用&#10;&#10;---"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Margin="0,10,0,0" Padding="10" CornerRadius="8"
-                                    Background="{DynamicResource CustomSubtleBg}">
+                            <Border Style="{StaticResource HelpCardStyle}">
                                 <StackPanel>
-                                    <TextBlock Text="代码块" FontWeight="SemiBold"/>
-                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="```csharp&#10;Console.WriteLine(&quot;Hello&quot;);&#10;```"/>
+                                    <DockPanel>
+                                        <TextBlock Text="代码块" Style="{StaticResource HelpTitleStyle}"/>
+                                        <ui:Button DockPanel.Dock="Right" Content="复制" Tag="```csharp&#10;Console.WriteLine(&quot;Hello&quot;);&#10;```" Click="OnCopyHelpSnippet" Padding="8,2" FontSize="11" Appearance="Secondary"/>
+                                    </DockPanel>
+                                    <TextBox Style="{StaticResource HelpSnippetStyle}" Text="```csharp&#10;Console.WriteLine(&quot;Hello&quot;);&#10;```"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Margin="0,10,0,0" Padding="10" CornerRadius="8"
-                                    Background="{DynamicResource CustomSubtleBg}">
+                            <Border Style="{StaticResource HelpCardStyle}">
                                 <StackPanel>
-                                    <TextBlock Text="表格" FontWeight="SemiBold"/>
-                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="| 名称 | 说明 |&#10;| --- | --- |&#10;| A | 内容 |"/>
+                                    <DockPanel>
+                                        <TextBlock Text="表格" Style="{StaticResource HelpTitleStyle}"/>
+                                        <ui:Button DockPanel.Dock="Right" Content="复制" Tag="| 名称 | 说明 |&#10;| --- | --- |&#10;| A | 内容 |" Click="OnCopyHelpSnippet" Padding="8,2" FontSize="11" Appearance="Secondary"/>
+                                    </DockPanel>
+                                    <TextBox Style="{StaticResource HelpSnippetStyle}" Text="| 名称 | 说明 |&#10;| --- | --- |&#10;| A | 内容 |"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>

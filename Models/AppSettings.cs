@@ -49,6 +49,12 @@ public class AppSettings
     /// <summary>Markdown 阅读页是否默认打开为源码模式</summary>
     public bool MarkdownReaderSourceMode { get; set; }
 
+    /// <summary>Markdown 阅读页默认缩放百分比</summary>
+    public int MarkdownReaderZoomPercent { get; set; } = 118;
+
+    /// <summary>Markdown 阅读页是否默认显示目录</summary>
+    public bool MarkdownReaderShowOutline { get; set; }
+
     // 以下字段为历史遗留（浮窗功能已移除），保留以避免数据库迁移问题
     public bool ShowMiniWindow { get; set; }
     public double MiniWindowX { get; set; } = 100;

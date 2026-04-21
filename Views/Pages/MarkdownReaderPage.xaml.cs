@@ -1,5 +1,7 @@
 using System.IO;
+using System.Text.Json;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -7,12 +9,17 @@ using System.Windows.Navigation;
 using System.Windows.Threading;
 using KiteTodo.Models;
 using KiteTodo.Services;
+using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
 
 namespace KiteTodo.Views.Pages;
 
 public partial class MarkdownReaderPage : Page
 {
+    private const int MinZoomPercent = 85;
+    private const int MaxZoomPercent = 200;
+    private const int ZoomStepPercent = 10;
+
     private readonly MarkdownPreviewService _markdownPreviewService = new();
     private readonly DatabaseService _databaseService = DatabaseService.Instance;
     private string? _currentFilePath;
@@ -20,13 +27,23 @@ public partial class MarkdownReaderPage : Page
     private bool _isSourceMode;
     private bool _hasUnsavedChanges;
     private bool _isInternalUpdate;
+    private int _previewZoomPercent;
+    private int _outlineHeadingCount;
+    private bool _showOutline;
+    private bool _showSyntaxHelp;
+    private bool _previewReady;
+    private string? _lastPreviewHtml;
 
     public MarkdownReaderPage()
     {
         InitializeComponent();
-        _isSourceMode = _databaseService.GetSettings().MarkdownReaderSourceMode;
+        var settings = _databaseService.GetSettings();
+        _isSourceMode = settings.MarkdownReaderSourceMode;
+        _previewZoomPercent = Math.Clamp(settings.MarkdownReaderZoomPercent, MinZoomPercent, MaxZoomPercent);
+        _showOutline = settings.MarkdownReaderShowOutline;
         Loaded += OnPageLoaded;
         Unloaded += OnPageUnloaded;
+        UpdateZoomUi();
         UpdateContentMode();
     }
 
@@ -65,14 +82,52 @@ public partial class MarkdownReaderPage : Page
         UpdateContentMode();
     }
 
+    private void OnZoomOut(object sender, RoutedEventArgs e)
+    {
+        ChangeZoom(-ZoomStepPercent);
+    }
+
+    private void OnZoomIn(object sender, RoutedEventArgs e)
+    {
+        ChangeZoom(ZoomStepPercent);
+    }
+
+    private void OnToggleOutline(object sender, RoutedEventArgs e)
+    {
+        _showOutline = !_showOutline;
+        SaveOutlinePreference();
+        UpdateOutlineUi();
+
+        if (!string.IsNullOrWhiteSpace(_currentFilePath) && !_isSourceMode)
+            RenderPreviewAsync();
+    }
+
+    private void OnToggleHelp(object sender, RoutedEventArgs e)
+    {
+        _showSyntaxHelp = !_showSyntaxHelp;
+        UpdateSyntaxHelpUi();
+    }
+
+    private void OnCopyHelpSnippet(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement element || element.Tag is not string text)
+            return;
+
+        var normalized = System.Net.WebUtility.HtmlDecode(text);
+        Clipboard.SetText(normalized);
+        AlertService.ShowCornerToast("语法片段已复制", 2);
+    }
+
     private void OnSourceTextChanged(object sender, TextChangedEventArgs e)
     {
         if (_isInternalUpdate)
             return;
 
         _currentMarkdown = SourceTextBox.Text;
+        _outlineHeadingCount = _markdownPreviewService.CountOutlineHeadings(_currentMarkdown);
         _hasUnsavedChanges = !string.Equals(_currentMarkdown, ReadCurrentFileText(), StringComparison.Ordinal);
         UpdateFileInfoText();
+        UpdateOutlineUi();
         UpdateActionButtons();
     }
 
@@ -113,6 +168,8 @@ public partial class MarkdownReaderPage : Page
         var navigationService = NavigationService;
         if (navigationService != null)
             navigationService.Navigating += OnNavigatingAway;
+
+        _ = EnsurePreviewReadyAsync();
     }
 
     private void OnPageUnloaded(object sender, RoutedEventArgs e)
@@ -139,6 +196,7 @@ public partial class MarkdownReaderPage : Page
         try
         {
             _currentMarkdown = File.ReadAllText(filePath);
+            _outlineHeadingCount = _markdownPreviewService.CountOutlineHeadings(_currentMarkdown);
             _isInternalUpdate = true;
             SourceTextBox.Text = _currentMarkdown;
             _isInternalUpdate = false;
@@ -150,6 +208,7 @@ public partial class MarkdownReaderPage : Page
             ToggleModeButton.IsEnabled = true;
             EmptyStatePanel.Visibility = Visibility.Collapsed;
             UpdateActionButtons();
+            UpdateOutlineUi();
             UpdateContentMode();
         }
         catch (Exception ex)
@@ -164,6 +223,8 @@ public partial class MarkdownReaderPage : Page
         ToggleModeButton.Content = _isSourceMode ? "查看阅读" : "查看源码";
         PreviewHost.Visibility = _isSourceMode ? Visibility.Collapsed : Visibility.Visible;
         SourceHost.Visibility = _isSourceMode ? Visibility.Visible : Visibility.Collapsed;
+        UpdateOutlineUi();
+        UpdateSyntaxHelpUi();
 
         if (!_isSourceMode && !string.IsNullOrWhiteSpace(_currentFilePath))
             RenderPreviewAsync();
@@ -204,23 +265,27 @@ public partial class MarkdownReaderPage : Page
         if (string.IsNullOrWhiteSpace(_currentFilePath))
             return;
 
-        var markdown = SourceTextBox.Text;
-        var filePath = _currentFilePath;
-
-        Dispatcher.BeginInvoke(() =>
-        {
-            if (string.IsNullOrWhiteSpace(filePath))
-                return;
-
-            var html = _markdownPreviewService.RenderHtml(markdown, filePath);
-            PreviewBrowser.NavigateToString(html);
-        }, DispatcherPriority.Background);
+        _ = RenderPreviewInternalAsync(SourceTextBox.Text, _currentFilePath);
     }
 
     private void SaveViewModePreference()
     {
         var settings = _databaseService.GetSettings();
         settings.MarkdownReaderSourceMode = _isSourceMode;
+        _databaseService.SaveSettings(settings);
+    }
+
+    private void SaveZoomPreference()
+    {
+        var settings = _databaseService.GetSettings();
+        settings.MarkdownReaderZoomPercent = _previewZoomPercent;
+        _databaseService.SaveSettings(settings);
+    }
+
+    private void SaveOutlinePreference()
+    {
+        var settings = _databaseService.GetSettings();
+        settings.MarkdownReaderShowOutline = _showOutline;
         _databaseService.SaveSettings(settings);
     }
 
@@ -271,5 +336,119 @@ public partial class MarkdownReaderPage : Page
             MessageBoxResult.No => true,
             _ => false
         };
+    }
+
+    private void ChangeZoom(int delta)
+    {
+        var nextZoom = Math.Clamp(_previewZoomPercent + delta, MinZoomPercent, MaxZoomPercent);
+        if (nextZoom == _previewZoomPercent)
+            return;
+
+        _previewZoomPercent = nextZoom;
+        UpdateZoomUi();
+        SaveZoomPreference();
+
+        if (!string.IsNullOrWhiteSpace(_currentFilePath) && !_isSourceMode)
+            RenderPreviewAsync();
+    }
+
+    private void UpdateZoomUi()
+    {
+        ZoomText.Text = $"{_previewZoomPercent}%";
+        ZoomOutButton.IsEnabled = _previewZoomPercent > MinZoomPercent;
+        ZoomInButton.IsEnabled = _previewZoomPercent < MaxZoomPercent;
+    }
+
+    private void UpdateOutlineUi()
+    {
+        var canShowOutline = !_isSourceMode
+            && !string.IsNullOrWhiteSpace(_currentFilePath)
+            && _outlineHeadingCount >= 3;
+
+        ToggleOutlineButton.Visibility = canShowOutline ? Visibility.Visible : Visibility.Collapsed;
+        ToggleOutlineButton.Content = _showOutline ? "隐藏目录" : "显示目录";
+    }
+
+    private void UpdateSyntaxHelpUi()
+    {
+        var canShowSyntaxHelp = _isSourceMode && !string.IsNullOrWhiteSpace(_currentFilePath);
+        ToggleHelpButton.Visibility = canShowSyntaxHelp ? Visibility.Visible : Visibility.Collapsed;
+
+        if (!canShowSyntaxHelp)
+        {
+            SourceHelpPanel.Visibility = Visibility.Collapsed;
+            SourceDivider.Visibility = Visibility.Collapsed;
+            SourceHelpColumn.Width = new GridLength(0);
+            SourceDividerColumn.Width = new GridLength(0);
+            SourceEditorColumn.Width = new GridLength(1, GridUnitType.Star);
+            return;
+        }
+
+        ToggleHelpButton.Content = _showSyntaxHelp ? "隐藏语法" : "显示语法";
+        SourceHelpPanel.Visibility = _showSyntaxHelp ? Visibility.Visible : Visibility.Collapsed;
+        SourceDivider.Visibility = _showSyntaxHelp ? Visibility.Visible : Visibility.Collapsed;
+        SourceHelpColumn.Width = _showSyntaxHelp ? new GridLength(0.9, GridUnitType.Star) : new GridLength(0);
+        SourceDividerColumn.Width = _showSyntaxHelp ? new GridLength(1) : new GridLength(0);
+        SourceEditorColumn.Width = _showSyntaxHelp ? new GridLength(2.75, GridUnitType.Star) : new GridLength(1, GridUnitType.Star);
+    }
+
+    private async Task EnsurePreviewReadyAsync()
+    {
+        if (_previewReady)
+            return;
+
+        await PreviewBrowser.EnsureCoreWebView2Async();
+        PreviewBrowser.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
+        PreviewBrowser.CoreWebView2.Settings.AreDevToolsEnabled = false;
+        PreviewBrowser.CoreWebView2.Settings.IsStatusBarEnabled = false;
+        PreviewBrowser.CoreWebView2.Settings.IsZoomControlEnabled = false;
+        PreviewBrowser.CoreWebView2.WebMessageReceived -= OnPreviewWebMessageReceived;
+        PreviewBrowser.CoreWebView2.WebMessageReceived += OnPreviewWebMessageReceived;
+        PreviewBrowser.DefaultBackgroundColor = System.Drawing.Color.White;
+        _previewReady = true;
+
+        if (!string.IsNullOrWhiteSpace(_lastPreviewHtml))
+            PreviewBrowser.NavigateToString(_lastPreviewHtml);
+    }
+
+    private async Task RenderPreviewInternalAsync(string markdown, string? filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            return;
+
+        var html = _markdownPreviewService.RenderHtml(markdown, filePath, _previewZoomPercent, _showOutline);
+        _lastPreviewHtml = html;
+
+        await Dispatcher.InvokeAsync(async () =>
+        {
+            await EnsurePreviewReadyAsync();
+
+            if (_lastPreviewHtml == html)
+                PreviewBrowser.NavigateToString(html);
+        }, DispatcherPriority.Background);
+    }
+
+    private void OnPreviewWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(e.WebMessageAsJson);
+            var root = document.RootElement;
+            if (!root.TryGetProperty("type", out var typeProperty))
+                return;
+
+            var type = typeProperty.GetString();
+            if (!string.Equals(type, "zoom-wheel", StringComparison.Ordinal))
+                return;
+
+            if (!root.TryGetProperty("delta", out var deltaProperty))
+                return;
+
+            ChangeZoom(deltaProperty.GetInt32() * ZoomStepPercent);
+        }
+        catch
+        {
+            // ignore malformed preview messages
+        }
     }
 }
