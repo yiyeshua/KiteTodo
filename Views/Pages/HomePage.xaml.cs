@@ -13,6 +13,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using KiteTodo.Helpers;
 using KiteTodo.Models;
 using KiteTodo.ViewModels;
 
@@ -22,12 +23,18 @@ public partial class HomePage : Page
 {
     private readonly HomeViewModel _vm = new();
     private TodoItem? _editingItem;
+    private List<TodoSubtask> _editingSubtasks = [];
 
     public HomePage()
     {
         InitializeComponent();
         DataContext = _vm;
         InitEditReminderCombos();
+        Loaded += (_, _) =>
+        {
+            ApplySearchNavigationRequest();
+            SyncViewSelector();
+        };
     }
 
     private void InitEditReminderCombos()
@@ -150,6 +157,15 @@ public partial class HomePage : Page
             EditReminderMinute.SelectedIndex = 0;
         }
 
+        EditRecurrence.SelectedIndex = (int)item.RecurrenceType;
+        _editingSubtasks = item.Subtasks.Select(subtask => new TodoSubtask
+        {
+            Id = subtask.Id,
+            Title = subtask.Title,
+            IsCompleted = subtask.IsCompleted
+        }).ToList();
+        RefreshSubtaskList();
+
         EditOverlay.Visibility = Visibility.Visible;
     }
 
@@ -194,20 +210,75 @@ public partial class HomePage : Page
             _editingItem.ReminderTime = date.AddHours(hour).AddMinutes(minute);
         }
 
+        _editingItem.RecurrenceType = (TodoRecurrenceType)EditRecurrence.SelectedIndex;
+        _editingItem.Subtasks = _editingSubtasks.Select(subtask => new TodoSubtask
+        {
+            Id = subtask.Id,
+            Title = subtask.Title,
+            IsCompleted = subtask.IsCompleted
+        }).ToList();
+
         _vm.UpdateTodo(_editingItem);
         _editingItem = null;
+        _editingSubtasks = [];
         EditOverlay.Visibility = Visibility.Collapsed;
     }
 
     private void OnCancelEdit(object sender, RoutedEventArgs e)
     {
         _editingItem = null;
+        _editingSubtasks = [];
         EditOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private void OnCloseEdit(object sender, RoutedEventArgs e)
+    {
+        OnCancelEdit(sender, e);
     }
 
     private void OnClearReminder(object sender, RoutedEventArgs e)
     {
         EditReminderDate.SelectedDate = null;
+    }
+
+    private void OnAddSubtask(object sender, RoutedEventArgs e)
+    {
+        var text = EditSubtaskInput.Text?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+
+        _editingSubtasks.Add(new TodoSubtask { Title = text });
+        EditSubtaskInput.Text = string.Empty;
+        RefreshSubtaskList();
+    }
+
+    private void OnToggleSubtaskItem(object sender, RoutedEventArgs e)
+    {
+        if (sender is CheckBox checkBox && checkBox.DataContext is TodoSubtask subtask)
+        {
+            var match = _editingSubtasks.FirstOrDefault(item => item.Id == subtask.Id);
+            if (match != null)
+                match.IsCompleted = checkBox.IsChecked == true;
+            RefreshSubtaskList();
+        }
+    }
+
+    private void OnDeleteSubtask(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement element && element.Tag is TodoSubtask subtask)
+        {
+            _editingSubtasks.RemoveAll(item => item.Id == subtask.Id);
+            RefreshSubtaskList();
+        }
+    }
+
+    private void RefreshSubtaskList()
+    {
+        EditSubtaskList.ItemsSource = null;
+        EditSubtaskList.ItemsSource = _editingSubtasks;
+        SubtaskSummaryText.Text = _editingSubtasks.Count == 0
+            ? "暂无子任务"
+            : $"已完成 {_editingSubtasks.Count(item => item.IsCompleted)} / {_editingSubtasks.Count}";
     }
 
     // ---- 导出周报功能 ----
@@ -251,6 +322,14 @@ public partial class HomePage : Page
         UpdateTagFilterVisuals();
     }
 
+    private void OnViewSelectorChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || ViewSelector.SelectedIndex < 0)
+            return;
+
+        _vm.SetView((HomeTodoView)ViewSelector.SelectedIndex);
+    }
+
     private void OnAddCustomTag(object sender, RoutedEventArgs e)
     {
         var dialog = new Window
@@ -289,6 +368,12 @@ public partial class HomePage : Page
             : (System.Windows.Media.Brush)FindResource("CustomFg");
     }
 
+    private void SyncViewSelector()
+    {
+        if (ViewSelector.SelectedIndex != (int)_vm.SelectedView)
+            ViewSelector.SelectedIndex = (int)_vm.SelectedView;
+    }
+
     // ---- 右键菜单：移动待办到本周其他天 ----
 
     /// <summary>
@@ -309,8 +394,11 @@ public partial class HomePage : Page
         PopulateDateMenu(moveToItem, todoItem, copyMode: false);
         PopulateDateMenu(copyToItem, todoItem, copyMode: true);
 
+        if (contextMenu.Items[2] is MenuItem overdueItem)
+            overdueItem.Visibility = todoItem.IsOverdue ? Visibility.Visible : Visibility.Collapsed;
+
         // 更新"待验证"菜单项文本
-        if (contextMenu.Items[5] is MenuItem verifyItem)
+        if (contextMenu.Items[6] is MenuItem verifyItem)
         {
             verifyItem.Header = todoItem.NeedsVerification ? "取消待验证" : "标记待验证";
         }
@@ -412,5 +500,29 @@ public partial class HomePage : Page
         {
             _vm.MoveTodoToBacklog(item);
         }
+    }
+
+    private void OnMoveOverdueToToday(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem mi && mi.DataContext is TodoItem item)
+            _vm.MoveTodo(item, DateTime.Today);
+    }
+
+    private void OnMoveOverdueToTomorrow(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem mi && mi.DataContext is TodoItem item)
+            _vm.MoveTodo(item, DateTime.Today.AddDays(1));
+    }
+
+    private void ApplySearchNavigationRequest()
+    {
+        if (SearchNavigationRequest.PendingTodoDate.HasValue)
+        {
+            _vm.SetView(HomeTodoView.ByDate);
+            _vm.SelectedDate = SearchNavigationRequest.PendingTodoDate.Value.Date;
+            SearchNavigationRequest.ClearTodo();
+        }
+
+        SyncViewSelector();
     }
 }

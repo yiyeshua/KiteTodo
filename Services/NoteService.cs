@@ -90,4 +90,17 @@ public class NoteService
         };
         _backlogService.Add(backlog);
     }
+
+    public List<Note> Search(string keyword)
+    {
+        if (string.IsNullOrWhiteSpace(keyword))
+            return [];
+
+        keyword = keyword.Trim();
+        return _db.Notes.FindAll()
+            .Where(x => (!string.IsNullOrWhiteSpace(x.Title) && x.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(x.Content) && x.Content.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(x => x.UpdatedAt)
+            .ToList();
+    }
 }

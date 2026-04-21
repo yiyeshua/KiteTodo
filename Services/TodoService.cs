@@ -36,6 +36,55 @@ public class TodoService
             .ToList();
     }
 
+    public List<TodoItem> GetTodayOpenTodos(string? tag)
+    {
+        return GetTodosByDateAndTag(DateTime.Today, tag)
+            .Where(x => !x.IsCompleted)
+            .ToList();
+    }
+
+    public List<TodoItem> GetOverdueTodos(string? tag)
+    {
+        var today = DateTime.Today;
+        var query = _db.Todos.Find(x => x.CompletedAt == null && x.ScheduledDate < today);
+        if (!string.IsNullOrEmpty(tag))
+            query = query.Where(x => x.Category == tag);
+
+        return query
+            .OrderBy(x => x.ScheduledDate)
+            .ThenByDescending(x => x.Priority)
+            .ThenBy(x => x.SortOrder)
+            .ToList();
+    }
+
+    public List<TodoItem> GetUpcomingTodos(DateTime startDate, int days, string? tag)
+    {
+        var start = startDate.Date;
+        var end = start.AddDays(days);
+        var query = _db.Todos.Find(x => x.CompletedAt == null && x.ScheduledDate >= start && x.ScheduledDate < end);
+        if (!string.IsNullOrEmpty(tag))
+            query = query.Where(x => x.Category == tag);
+
+        return query
+            .OrderBy(x => x.ScheduledDate)
+            .ThenByDescending(x => x.Priority)
+            .ThenBy(x => x.SortOrder)
+            .ToList();
+    }
+
+    public List<TodoItem> GetNeedsVerificationByTag(string? tag)
+    {
+        var query = _db.Todos.Find(x => x.NeedsVerification && x.CompletedAt == null);
+        if (!string.IsNullOrEmpty(tag))
+            query = query.Where(x => x.Category == tag);
+
+        return query
+            .OrderByDescending(x => x.Priority)
+            .ThenBy(x => x.ScheduledDate)
+            .ThenBy(x => x.SortOrder)
+            .ToList();
+    }
+
     /// <summary>获取日期范围内的所有待办（用于周视图、月视图、导出）</summary>
     public List<TodoItem> GetTodosByDateRange(DateTime start, DateTime end)
     {
@@ -50,6 +99,7 @@ public class TodoService
     {
         item.CreatedAt = DateTime.Now;
         _db.Todos.Insert(item);
+        ReminderService.Instance.ClearNotified(item.Id);
         return item;
     }
 
@@ -57,6 +107,101 @@ public class TodoService
     public void Update(TodoItem item)
     {
         _db.Todos.Update(item);
+        ReminderService.Instance.ClearNotified(item.Id);
+    }
+
+    public TodoItem? EnsureNextRecurringTodo(TodoItem item)
+    {
+        if (item.RecurrenceType == TodoRecurrenceType.None)
+            return null;
+
+        var existing = _db.Todos.FindOne(x => x.RecurrenceSourceTodoId == item.Id);
+        if (existing != null)
+            return existing;
+
+        var nextDate = item.RecurrenceType switch
+        {
+            TodoRecurrenceType.Daily => item.ScheduledDate.Date.AddDays(1),
+            TodoRecurrenceType.Weekly => item.ScheduledDate.Date.AddDays(7),
+            TodoRecurrenceType.Monthly => item.ScheduledDate.Date.AddMonths(1),
+            _ => item.ScheduledDate.Date
+        };
+
+        var nextTodo = new TodoItem
+        {
+            Title = item.Title,
+            Description = item.Description,
+            ScheduledDate = nextDate,
+            Priority = item.Priority,
+            Progress = 0,
+            Category = item.Category,
+            ReminderTime = GetNextReminderTime(item.ReminderTime, nextDate),
+            SortOrder = item.SortOrder,
+            PomodoroCount = 0,
+            NeedsVerification = false,
+            RecurrenceType = item.RecurrenceType,
+            RecurrenceSourceTodoId = item.Id,
+            Subtasks = item.Subtasks.Select(subtask => new TodoSubtask
+            {
+                Title = subtask.Title,
+                IsCompleted = false
+            }).ToList()
+        };
+
+        return Add(nextTodo);
+    }
+
+    public void SnoozeReminder(int todoId, TimeSpan delay)
+    {
+        var todo = GetById(todoId);
+        if (todo == null)
+            return;
+
+        todo.ReminderTime = DateTime.Now.Add(delay);
+        Update(todo);
+    }
+
+    public void MoveReminderToTomorrow(int todoId)
+    {
+        var todo = GetById(todoId);
+        if (todo == null)
+            return;
+
+        var source = todo.ReminderTime ?? DateTime.Now;
+        var next = DateTime.Today.AddDays(1)
+            .AddHours(source.Hour)
+            .AddMinutes(source.Minute);
+        todo.ReminderTime = next;
+        Update(todo);
+    }
+
+    public List<TodoItem> Search(string keyword)
+    {
+        if (string.IsNullOrWhiteSpace(keyword))
+            return [];
+
+        keyword = keyword.Trim();
+        return _db.Todos.FindAll()
+            .Where(x => ContainsKeyword(x.Title, keyword)
+                || ContainsKeyword(x.Description, keyword)
+                || ContainsKeyword(x.Category, keyword))
+            .OrderByDescending(x => x.CreatedAt)
+            .ToList();
+    }
+
+    public ReviewStats GetReviewStats(DateTime anchorDate)
+    {
+        var weekStart = GetWeekStart(anchorDate);
+        var weekEnd = weekStart.AddDays(7);
+        var allTodos = _db.Todos.FindAll().ToList();
+
+        return new ReviewStats
+        {
+            NewCount = allTodos.Count(x => x.CreatedAt >= weekStart && x.CreatedAt < weekEnd),
+            CompletedCount = allTodos.Count(x => x.CompletedAt >= weekStart && x.CompletedAt < weekEnd),
+            OverdueCount = allTodos.Count(x => x.CompletedAt == null && x.ScheduledDate.Date < DateTime.Today),
+            VerificationCount = allTodos.Count(x => x.NeedsVerification && x.CompletedAt == null)
+        };
     }
 
     /// <summary>复制待办到指定日期，返回新建的待办对象。</summary>
@@ -147,5 +292,27 @@ public class TodoService
             .OrderByDescending(x => x.CompletedAt)
             .ThenByDescending(x => x.ScheduledDate)
             .ToList();
+    }
+
+    private static bool ContainsKeyword(string? value, string keyword)
+    {
+        return !string.IsNullOrWhiteSpace(value)
+            && value.Contains(keyword, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static DateTime? GetNextReminderTime(DateTime? reminderTime, DateTime nextDate)
+    {
+        if (!reminderTime.HasValue)
+            return null;
+
+        return nextDate
+            .AddHours(reminderTime.Value.Hour)
+            .AddMinutes(reminderTime.Value.Minute);
+    }
+
+    private static DateTime GetWeekStart(DateTime date)
+    {
+        var diff = date.DayOfWeek == DayOfWeek.Sunday ? 6 : (int)date.DayOfWeek - 1;
+        return date.Date.AddDays(-diff);
     }
 }

@@ -50,6 +50,33 @@ public class TodoItem
     /// <summary>是否标记为待验证（功能已完成但未经验证）</summary>
     public bool NeedsVerification { get; set; }
 
+    /// <summary>周期任务规则</summary>
+    public TodoRecurrenceType RecurrenceType { get; set; }
+
+    /// <summary>由上一条周期任务生成时，记录其来源待办 Id。</summary>
+    public int? RecurrenceSourceTodoId { get; set; }
+
+    /// <summary>子任务清单</summary>
+    public List<TodoSubtask> Subtasks { get; set; } = [];
+
     /// <summary>是否已完成（计算属性，根据 CompletedAt 是否有值判断）</summary>
     public bool IsCompleted => CompletedAt.HasValue;
+
+    public bool IsOverdue => !IsCompleted && ScheduledDate.Date < DateTime.Today;
+
+    public int CompletedSubtaskCount => Subtasks.Count(x => x.IsCompleted);
+
+    public int TotalSubtaskCount => Subtasks.Count;
+
+    public bool HasSubtasks => TotalSubtaskCount > 0;
+
+    public string SubtaskSummary => HasSubtasks ? $"清单 {CompletedSubtaskCount}/{TotalSubtaskCount}" : string.Empty;
+
+    public string RecurrenceText => RecurrenceType switch
+    {
+        TodoRecurrenceType.Daily => "每天重复",
+        TodoRecurrenceType.Weekly => "每周重复",
+        TodoRecurrenceType.Monthly => "每月重复",
+        _ => string.Empty
+    };
 }

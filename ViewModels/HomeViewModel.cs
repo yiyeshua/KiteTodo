@@ -77,6 +77,10 @@ public partial class HomeViewModel : ObservableObject
     [ObservableProperty]
     private int _totalCount;
 
+    /// <summary>当前视图未完成数</summary>
+    [ObservableProperty]
+    private int _uncompletedCount;
+
     /// <summary>当天待验证数</summary>
     [ObservableProperty]
     private int _verificationCount;
@@ -92,6 +96,9 @@ public partial class HomeViewModel : ObservableObject
     /// <summary>当前筛选标签（null 表示"全部"）</summary>
     [ObservableProperty]
     private string? _selectedTag;
+
+    [ObservableProperty]
+    private HomeTodoView _selectedView = HomeTodoView.ByDate;
 
     /// <summary>可用标签列表（预定义 + 自定义）</summary>
     [ObservableProperty]
@@ -116,6 +123,11 @@ public partial class HomeViewModel : ObservableObject
 
     /// <summary>当筛选标签变化时刷新待办列表</summary>
     partial void OnSelectedTagChanged(string? value)
+    {
+        LoadTodos();
+    }
+
+    partial void OnSelectedViewChanged(HomeTodoView value)
     {
         LoadTodos();
     }
@@ -178,11 +190,25 @@ public partial class HomeViewModel : ObservableObject
     /// <summary>从数据库加载当前选中日期的待办（支持标签筛选）</summary>
     public void LoadTodos()
     {
-        var items = _todoService.GetTodosByDateAndTag(SelectedDate, SelectedTag);
+        List<TodoItem> items = SelectedView switch
+        {
+            HomeTodoView.TodayOpen => _todoService.GetTodayOpenTodos(SelectedTag),
+            HomeTodoView.Overdue => _todoService.GetOverdueTodos(SelectedTag),
+            HomeTodoView.Verification => _todoService.GetNeedsVerificationByTag(SelectedTag),
+            HomeTodoView.Upcoming => _todoService.GetUpcomingTodos(DateTime.Today, 7, SelectedTag),
+            _ => _todoService.GetTodosByDateAndTag(SelectedDate, SelectedTag)
+        };
+
         Todos = new ObservableCollection<TodoItem>(items);
         TotalCount = items.Count;
         CompletedCount = items.Count(x => x.IsCompleted);
+        UncompletedCount = items.Count(x => !x.IsCompleted);
         VerificationCount = items.Count(x => x.NeedsVerification);
+    }
+
+    public void SetView(HomeTodoView view)
+    {
+        SelectedView = view;
     }
 
     /// <summary>
@@ -210,6 +236,8 @@ public partial class HomeViewModel : ObservableObject
         }
 
         _todoService.Update(todo);
+        if (todo.IsCompleted)
+            _todoService.EnsureNextRecurringTodo(todo);
         LoadTodos();
     }
 

@@ -1,0 +1,91 @@
+<Page x:Class="KiteTodo.Views.Pages.SearchPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      Title="全局搜索"
+      Language="zh-CN">
+
+    <Grid Margin="24,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="全局搜索" FontSize="22" FontWeight="SemiBold"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource CustomFg}"/>
+            <TextBlock Text="搜索待办、事项池和记事本"
+                       FontSize="12" Opacity="0.6" Margin="12,0,0,0"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource CustomFgSecondary}"/>
+        </DockPanel>
+
+        <DockPanel Grid.Row="1" Margin="0,0,0,12">
+            <ui:Button DockPanel.Dock="Right" Content="搜索" Appearance="Primary" Click="OnSearch" Margin="8,0,0,0"/>
+            <ui:TextBox x:Name="SearchBox" PlaceholderText="输入关键词，例如模块名、任务标题、笔记内容..." KeyDown="OnSearchKeyDown"/>
+        </DockPanel>
+
+        <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock x:Name="SummaryText"
+                       Foreground="{DynamicResource CustomFgSecondary}"
+                       Margin="0,0,0,10"/>
+
+            <Border Grid.Row="1" CornerRadius="10" Padding="10"
+                    Background="{DynamicResource CustomCardBg}"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource CustomSubtleBorder}">
+                <Grid>
+                    <StackPanel x:Name="EmptyStatePanel" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <ui:SymbolIcon Symbol="Search24" FontSize="46" Opacity="0.2"/>
+                        <TextBlock x:Name="EmptyStateText" Text="输入关键词开始搜索" Margin="0,12,0,0" Opacity="0.4"/>
+                    </StackPanel>
+
+                    <ListBox x:Name="ResultList"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             MouseDoubleClick="OnOpenSelectedResult">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="12,10" Margin="0,0,0,8" CornerRadius="8"
+                                        Background="{DynamicResource CustomSubtleBg}"
+                                        BorderThickness="1"
+                                        BorderBrush="{DynamicResource CustomSubtleBorder}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Background="#E8F0FE" CornerRadius="10" Padding="8,2">
+                                                    <TextBlock Text="{Binding Section}" Foreground="#1664D9" FontSize="11" FontWeight="SemiBold"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding MetaText}" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource CustomFgSecondary}" FontSize="11"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Title}" Margin="0,8,0,0" FontSize="14" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource CustomFg}" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Description}" Margin="0,4,0,0" MaxHeight="42" TextWrapping="Wrap"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Foreground="{DynamicResource CustomFgSecondary}"/>
+                                        </StackPanel>
+
+                                        <ui:Button Grid.Column="1" Content="打开" Appearance="Secondary" Tag="{Binding}" Click="OnOpenResult" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Page>

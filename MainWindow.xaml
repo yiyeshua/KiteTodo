@@ -44,6 +44,11 @@
                         <ui:SymbolIcon Symbol="ArrowExportUp24"/>
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="全局搜索" TargetPageType="{x:Type pages:SearchPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Search24"/>
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="事项池" TargetPageType="{x:Type pages:BacklogPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Archive24"/>

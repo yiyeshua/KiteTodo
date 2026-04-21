@@ -26,6 +26,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -52,6 +53,14 @@
                            Text="{Binding CompletedCount, StringFormat='已完成: {0}'}" FontSize="14"/>
                 <TextBlock VerticalAlignment="Center" Margin="4,0,0,0" Opacity="0.6"
                            Text="{Binding TotalCount, StringFormat='/ {0}'}" FontSize="14"/>
+                <Border CornerRadius="8" Padding="6,2" Margin="12,0,0,0"
+                        Background="#20D2691E" VerticalAlignment="Center"
+                        Visibility="{Binding UncompletedCount, Converter={StaticResource ZeroToCollapsedConverter}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="未完成: " FontSize="12" Foreground="#D2691E"/>
+                        <TextBlock Text="{Binding UncompletedCount}" FontSize="12" Foreground="#D2691E" FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
                 <Border CornerRadius="8" Padding="6,2" Margin="12,0,0,0"
                         Background="#20FF8C00" VerticalAlignment="Center"
                         Visibility="{Binding VerificationCount, Converter={StaticResource ZeroToCollapsedConverter}}">
@@ -131,10 +140,24 @@
             </DockPanel>
         </Border>
 
-        <!-- Tag Filter Bar -->
         <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
                       Margin="0,0,0,8">
             <StackPanel Orientation="Horizontal">
+                <TextBlock Text="快捷视图" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Foreground="{DynamicResource CustomFgSecondary}"/>
+                <ComboBox x:Name="ViewSelector"
+                          Width="170"
+                          VerticalAlignment="Center"
+                          Margin="0,0,14,0"
+                          SelectionChanged="OnViewSelectorChanged">
+                    <ComboBoxItem Content="按日期"/>
+                    <ComboBoxItem Content="今天未完成"/>
+                    <ComboBoxItem Content="已逾期"/>
+                    <ComboBoxItem Content="待验证"/>
+                    <ComboBoxItem Content="未来 7 天"/>
+                </ComboBox>
+                <TextBlock Text="标签" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Foreground="{DynamicResource CustomFgSecondary}"/>
                 <Button Content="全部" Click="OnClearTagFilter" Cursor="Hand"
                         Padding="10,4" Margin="0,0,4,0" FontSize="12"
                         x:Name="TagFilterAll">
@@ -217,7 +240,7 @@
         </ScrollViewer>
 
         <!-- Todo List -->
-        <ListBox Grid.Row="3" ItemsSource="{Binding Todos}"
+        <ListBox Grid.Row="4" ItemsSource="{Binding Todos}"
                  Background="Transparent" BorderThickness="0"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  x:Name="TodoListBox">
@@ -237,6 +260,12 @@
                             <ContextMenu>
                                 <MenuItem Header="移动到"/>
                                 <MenuItem Header="复制到"/>
+                                <MenuItem Header="延期处理">
+                                    <MenuItem Header="移到今天" Click="OnMoveOverdueToToday"/>
+                                    <MenuItem Header="移到明天" Click="OnMoveOverdueToTomorrow"/>
+                                    <Separator/>
+                                    <MenuItem Header="转入事项池" Click="OnMoveToBacklog"/>
+                                </MenuItem>
                                 <MenuItem Header="转入事项池" Click="OnMoveToBacklog"/>
                                 <MenuItem Header="开始专注" Click="OnStartFocus"/>
                                 <Separator/>
@@ -309,6 +338,11 @@
                                                TextDecorations="{Binding IsCompleted, Converter={StaticResource StrikethroughConverter}}"
                                                Opacity="{Binding IsCompleted, Converter={StaticResource BoolToOpacityConverter}}"/>
                                     <Border CornerRadius="8" Padding="6,1" Margin="6,0,0,0"
+                                            Background="#20D2691E" VerticalAlignment="Center"
+                                            Visibility="{Binding IsOverdue, Converter={StaticResource BoolToVisConverter}}">
+                                        <TextBlock Text="已逾期" FontSize="10" Foreground="#D2691E" FontWeight="SemiBold"/>
+                                    </Border>
+                                    <Border CornerRadius="8" Padding="6,1" Margin="6,0,0,0"
                                             Background="#200078D4" VerticalAlignment="Center"
                                             Visibility="{Binding Category, Converter={StaticResource EmptyStringToCollapsedConverter}}">
                                         <TextBlock Text="{Binding Category}" FontSize="10" Foreground="#0078D4"/>
@@ -317,6 +351,11 @@
                                             Background="#20FF8C00" VerticalAlignment="Center"
                                             Visibility="{Binding NeedsVerification, Converter={StaticResource BoolToVisConverter}}">
                                         <TextBlock Text="待验证" FontSize="10" Foreground="#FF8C00" FontWeight="SemiBold"/>
+                                    </Border>
+                                    <Border CornerRadius="8" Padding="6,1" Margin="6,0,0,0"
+                                            Background="#201F7A68" VerticalAlignment="Center"
+                                            Visibility="{Binding RecurrenceText, Converter={StaticResource EmptyStringToCollapsedConverter}}">
+                                        <TextBlock Text="{Binding RecurrenceText}" FontSize="10" Foreground="#1F7A68" FontWeight="SemiBold"/>
                                     </Border>
                                 </StackPanel>
                                 <Grid Margin="0,3,0,0"
@@ -342,6 +381,9 @@
                                                Text="{Binding ReminderTime, Converter={StaticResource ReminderTimeConverter}}"
                                                Visibility="{Binding ReminderTime, Converter={StaticResource NullToCollapsedConverter}}"/>
                                 </StackPanel>
+                                <TextBlock Text="{Binding SubtaskSummary}" FontSize="11" Margin="0,2,0,0"
+                                           Foreground="{DynamicResource CustomFgSecondary}"
+                                           Visibility="{Binding HasSubtasks, Converter={StaticResource BoolToVisConverter}}"/>
                             </StackPanel>
 
                             <!-- Edit Button -->
@@ -362,7 +404,7 @@
         </ListBox>
 
         <!-- Empty State -->
-        <StackPanel Grid.Row="3" HorizontalAlignment="Center" VerticalAlignment="Center"
+        <StackPanel Grid.Row="4" HorizontalAlignment="Center" VerticalAlignment="Center"
                     Visibility="{Binding Todos.Count, Converter={StaticResource ZeroToVisibleConverter}}">
             <ui:SymbolIcon Symbol="ClipboardTaskListLtr24" FontSize="48" Opacity="0.3"/>
             <TextBlock Text="今日暂无待办事项" FontSize="16" Opacity="0.4"
@@ -370,7 +412,7 @@
         </StackPanel>
 
         <!-- Quick Add Bar -->
-        <Grid Grid.Row="4" Margin="0,12,0,0">
+        <Grid Grid.Row="5" Margin="0,12,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -383,17 +425,34 @@
         </Grid>
 
         <!-- Edit Dialog Overlay -->
-        <Border x:Name="EditOverlay" Grid.RowSpan="5" Visibility="Collapsed"
+        <Border x:Name="EditOverlay" Grid.RowSpan="6" Visibility="Collapsed"
                 Background="#80000000">
-            <Border Background="{DynamicResource CustomOverlayBg}" CornerRadius="8" Padding="24" MaxWidth="680"
+            <Border Background="{DynamicResource CustomOverlayBg}" CornerRadius="8" Padding="20" MaxWidth="660" MaxHeight="620"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     MinWidth="600">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="20" Opacity="0.3" ShadowDepth="4"/>
                 </Border.Effect>
-                <StackPanel>
-                    <TextBlock Text="编辑待办" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,16"/>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="编辑待办" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="✕" Width="32" Height="32" BorderThickness="0"
+                                Background="Transparent" Foreground="{DynamicResource CustomFgSecondary}"
+                                Click="OnCloseEdit" ToolTip="关闭"/>
+                    </Grid>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -408,7 +467,7 @@
 
                             <TextBlock Text="详细内容" FontSize="13" Margin="0,0,0,4"/>
                             <ui:TextBox x:Name="EditDescription" Margin="0,0,0,0"
-                                        MinHeight="160" AcceptsReturn="True" TextWrapping="Wrap"
+                                        MinHeight="120" MaxHeight="180" AcceptsReturn="True" TextWrapping="Wrap"
                                         PlaceholderText="输入详细描述（可选）"/>
                         </StackPanel>
 
@@ -451,14 +510,60 @@
                                 <ComboBox x:Name="EditReminderMinute" Width="65" Margin="0,0,6,0"/>
                                 <ui:Button Content="清除" Appearance="Secondary" Click="OnClearReminder" Padding="6,3" FontSize="12"/>
                             </StackPanel>
+
+                            <TextBlock Text="重复规则" FontSize="13" Margin="0,12,0,4"/>
+                            <ComboBox x:Name="EditRecurrence" Margin="0,0,0,0">
+                                <ComboBoxItem Content="不重复"/>
+                                <ComboBoxItem Content="每天"/>
+                                <ComboBoxItem Content="每周"/>
+                                <ComboBoxItem Content="每月"/>
+                            </ComboBox>
                         </StackPanel>
                     </Grid>
 
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                    <Border Margin="0,12,0,0" Padding="12,10" CornerRadius="8"
+                            Background="{DynamicResource CustomCardBg}" BorderThickness="1"
+                            BorderBrush="{DynamicResource CustomSubtleBorder}">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBlock Text="子任务 / 清单" FontSize="13" FontWeight="SemiBold" DockPanel.Dock="Left"/>
+                                <TextBlock x:Name="SubtaskSummaryText" DockPanel.Dock="Right" Opacity="0.6"/>
+                            </DockPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="360"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBox x:Name="EditSubtaskInput" Grid.Column="0" PlaceholderText="输入一条子任务后点击添加"/>
+                                <ui:Button Grid.Column="1" Content="添加" Appearance="Secondary" Click="OnAddSubtask" Margin="8,0,0,0" MinWidth="60"/>
+                            </Grid>
+                            <ListBox x:Name="EditSubtaskList" Background="Transparent" BorderThickness="0" MaxHeight="110">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <CheckBox Grid.Column="0" Margin="0,0,8,0" IsChecked="{Binding IsCompleted}" Click="OnToggleSubtaskItem"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                            <ui:Button Grid.Column="2" Content="删除" Appearance="Secondary" Tag="{Binding}" Click="OnDeleteSubtask" Padding="8,2"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </Border>
+                    </StackPanel>
+                    </ScrollViewer>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
                         <ui:Button Content="取消" Appearance="Secondary" Click="OnCancelEdit" Margin="0,0,8,0"/>
                         <ui:Button Content="保存" Appearance="Primary" Click="OnSaveEdit"/>
                     </StackPanel>
-                </StackPanel>
+                </Grid>
             </Border>
         </Border>
     </Grid>

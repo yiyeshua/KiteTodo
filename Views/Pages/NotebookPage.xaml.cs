@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using System.ComponentModel;
+using KiteTodo.Helpers;
 using KiteTodo.Models;
 using KiteTodo.Services;
 using KiteTodo.ViewModels;
@@ -37,7 +38,11 @@ public partial class NotebookPage : Page
         InitializeComponent();
         DataContext = _vm;
         _vm.PropertyChanged += OnViewModelPropertyChanged;
-        Loaded += (_, _) => LoadEditorFromViewModel();
+        Loaded += (_, _) =>
+        {
+            ApplySearchNavigationRequest();
+            LoadEditorFromViewModel();
+        };
     }
 
     /// <summary>点击保存按钮时保存当前笔记</summary>
@@ -111,6 +116,15 @@ public partial class NotebookPage : Page
         }
 
         QueueEditorVisualRefresh(true);
+    }
+
+    private void ApplySearchNavigationRequest()
+    {
+        if (!SearchNavigationRequest.PendingNoteId.HasValue)
+            return;
+
+        _vm.SelectNote(SearchNavigationRequest.PendingNoteId.Value);
+        SearchNavigationRequest.ClearNote();
     }
 
     private void OnDecreaseFontSize(object sender, RoutedEventArgs e)

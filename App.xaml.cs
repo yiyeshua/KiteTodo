@@ -53,7 +53,7 @@ public partial class App : Application
 
         // Start reminder service
         ReminderService.Instance.Start();
-        ReminderService.Instance.ReminderFired += OnReminderFired;
+        ReminderService.Instance.ReminderBatchFired += OnReminderBatchFired;
 
         // Setup tray icon
         SetupTrayIcon();
@@ -214,10 +214,36 @@ public partial class App : Application
         });
     }
 
-    /// <summary>待办提醒时间到期时的回调（暂不弹窗，后续再定方案）</summary>
-    private void OnReminderFired()
+    private void OnReminderBatchFired(IReadOnlyList<TodoItem> todos)
     {
-        // 暂时不弹出待办提醒弹窗
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (todos.Count == 0)
+                return;
+
+            var title = todos.Count == 1
+                ? $"今日提醒：{todos[0].Title}"
+                : $"今日有 {todos.Count} 条待办到提醒时间";
+
+            var subMessage = todos.Count == 1
+                ? "请在方便时处理"
+                : BuildReminderSummary(todos);
+
+            AlertService.ShowCornerToast($"{title}\n{subMessage}", 4);
+        });
+    }
+
+    private static string BuildReminderSummary(IReadOnlyList<TodoItem> todos)
+    {
+        var topTitles = todos
+            .Take(2)
+            .Select(todo => todo.Title)
+            .ToList();
+
+        if (todos.Count <= 2)
+            return string.Join("；", topTitles);
+
+        return $"{string.Join("；", topTitles)} 等 {todos.Count} 条";
     }
 
     /// <summary>将番茄钟当前状态同步到浮标显示</summary>

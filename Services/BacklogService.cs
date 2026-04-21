@@ -104,4 +104,18 @@ public class BacklogService
 
         return todo;
     }
+
+    public List<BacklogItem> Search(string keyword)
+    {
+        if (string.IsNullOrWhiteSpace(keyword))
+            return [];
+
+        keyword = keyword.Trim();
+        return _db.Backlogs.FindAll()
+            .Where(x => (!string.IsNullOrWhiteSpace(x.Title) && x.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(x.Description) && x.Description.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                || (!string.IsNullOrWhiteSpace(x.Category) && x.Category.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(x => x.CreatedAt)
+            .ToList();
+    }
 }

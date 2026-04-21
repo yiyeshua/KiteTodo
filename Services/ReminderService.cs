@@ -5,13 +5,12 @@
 
 using System.Windows.Threading;
 using KiteTodo.Models;
-using Microsoft.Toolkit.Uwp.Notifications;
 
 namespace KiteTodo.Services;
 
 /// <summary>
 /// 提醒服务，使用 DispatcherTimer 定时轮询数据库中设有提醒时间的未完成待办。
-/// 当某待办的 ReminderTime 到达当前时间时，弹出 Windows 系统 Toast 通知。
+/// 当某待办的 ReminderTime 到达当前时间时，触发应用内摘要提示。
 /// 
 /// 使用方式：ReminderService.Instance.Start() / .Stop()
 /// </summary>
@@ -23,11 +22,10 @@ public class ReminderService
     private readonly DatabaseService _db = DatabaseService.Instance;
     private readonly DispatcherTimer _timer;
 
-    // 已通知过的待办 ID 集合，避免同一个待办重复弹出通知
+    // 已处理过的待办 ID 集合，避免同一个待办重复触发
     private readonly HashSet<int> _notifiedIds = new();
 
-    /// <summary>提醒触发时的回调（用于触发桌面提醒效果）</summary>
-    public event Action? ReminderFired;
+    public event Action<IReadOnlyList<TodoItem>>? ReminderBatchFired;
 
     private ReminderService()
     {
@@ -52,18 +50,21 @@ public class ReminderService
 
     /// <summary>
     /// 定时器回调：查询所有设有提醒且未完成的待办，
-    /// 如果提醒时间已到且尚未通知过，则弹出 Toast 通知。
+    /// 仅处理“今天新到期”的提醒，并将同一轮触发的提醒合并为一条摘要提示。
     /// </summary>
     private void CheckReminders(object? sender, EventArgs e)
     {
         try
         {
             var now = DateTime.Now;
+            var today = now.Date;
             // 查询所有有提醒时间且未完成的待办
             var todos = _db.Todos.Find(x =>
                 x.ReminderTime != null &&
                 x.CompletedAt == null)
                 .ToList();
+
+            var dueTodayTodos = new List<TodoItem>();
 
             foreach (var todo in todos)
             {
@@ -72,11 +73,16 @@ public class ReminderService
                     todo.ReminderTime.Value <= now &&
                     !_notifiedIds.Contains(todo.Id))
                 {
-                    ShowReminder(todo);
-                    _notifiedIds.Add(todo.Id); // 标记为已通知
-                    ReminderFired?.Invoke();
+                    _notifiedIds.Add(todo.Id);
+
+                    // 只提醒今天新到期的，不提醒历史积压
+                    if (todo.ReminderTime.Value.Date == today)
+                        dueTodayTodos.Add(todo);
                 }
             }
+
+            if (dueTodayTodos.Count > 0)
+                ReminderBatchFired?.Invoke(dueTodayTodos);
 
             // 防止内存泄漏：通知 ID 集合过大时清空
             if (_notifiedIds.Count > 1000)
@@ -85,24 +91,6 @@ public class ReminderService
         catch
         {
             // 静默忽略提醒检查失败（不影响主程序运行）
-        }
-    }
-
-    /// <summary>弹出 Windows Toast 通知</summary>
-    private void ShowReminder(TodoItem todo)
-    {
-        try
-        {
-            new ToastContentBuilder()
-                .AddText($"待办提醒：{todo.Title}")
-                .AddText(string.IsNullOrWhiteSpace(todo.Description)
-                    ? $"计划日期: {todo.ScheduledDate:yyyy-MM-dd}"
-                    : todo.Description)
-                .Show();
-        }
-        catch
-        {
-            // 某些系统环境下 Toast 可能不可用，静默忽略
         }
     }
 

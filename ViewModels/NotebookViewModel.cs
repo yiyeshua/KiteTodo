@@ -232,4 +232,10 @@ public partial class NotebookViewModel : ObservableObject
         else if (!deleteAfterTransfer)
             SelectedNote = Notes.FirstOrDefault(n => n.Id == note.Id);
     }
+
+    public void SelectNote(int noteId)
+    {
+        LoadNotes(noteId);
+        SelectedNote = Notes.FirstOrDefault(n => n.Id == noteId);
+    }
 }
