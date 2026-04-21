@@ -29,6 +29,7 @@ public partial class DiagramDesignerPage : Page
     private const int SavedFlowchartsPageSize = 8;
     private static readonly TimeSpan AutoSaveDelay = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan PaletteDuplicateSuppressWindow = TimeSpan.FromMilliseconds(200);
+    private static readonly string[] ConnectionLabelPresets = ["是", "否", "确定", "不确定"];
 
     private enum ExportImageScope
     {
@@ -57,6 +58,8 @@ public partial class DiagramDesignerPage : Page
         public required Polyline Line { get; init; }
         public required Polyline HitArea { get; init; }
         public required Polygon Arrow { get; init; }
+        public required Border LabelHost { get; init; }
+        public required TextBlock LabelText { get; init; }
         public required Ellipse SourceHandle { get; init; }
         public required Ellipse TargetHandle { get; init; }
     }
@@ -83,6 +86,7 @@ public partial class DiagramDesignerPage : Page
     {
         public required Guid SourceNodeId { get; init; }
         public required Guid TargetNodeId { get; init; }
+        public required string Label { get; init; }
         public required FlowchartConnectionStyle Style { get; init; }
         public bool? IsHorizontalFirst { get; init; }
         public FlowchartAnchorSide? SourceAnchorSide { get; init; }
@@ -468,16 +472,42 @@ public partial class DiagramDesignerPage : Page
             Fill = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
             IsHitTestVisible = false
         };
+        var labelText = new TextBlock
+        {
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(Color.FromRgb(31, 41, 55)),
+            TextWrapping = TextWrapping.Wrap,
+            TextAlignment = TextAlignment.Center,
+            MaxWidth = 140
+        };
+        var labelHost = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(235, 255, 255, 255)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(8, 3, 8, 3),
+            Child = labelText,
+            Cursor = Cursors.IBeam,
+            Visibility = Visibility.Collapsed,
+            Tag = connection.Id
+        };
+        labelHost.MouseLeftButtonDown += OnConnectionLabelMouseLeftButtonDown;
+        labelHost.PreviewMouseRightButtonDown += OnConnectionLabelPreviewMouseRightButtonDown;
+        labelHost.ContextMenu = CreateConnectionContextMenu(connection.Id);
         var sourceHandle = CreateConnectionEndpointHandle(connection.Id, true);
         var targetHandle = CreateConnectionEndpointHandle(connection.Id, false);
         Panel.SetZIndex(hitArea, 2);
         Panel.SetZIndex(line, 1);
         Panel.SetZIndex(arrow, 1);
+        Panel.SetZIndex(labelHost, 4);
         Panel.SetZIndex(sourceHandle, 3);
         Panel.SetZIndex(targetHandle, 3);
         DesignerCanvas.Children.Add(hitArea);
         DesignerCanvas.Children.Add(line);
         DesignerCanvas.Children.Add(arrow);
+        DesignerCanvas.Children.Add(labelHost);
         DesignerCanvas.Children.Add(sourceHandle);
         DesignerCanvas.Children.Add(targetHandle);
 
@@ -487,6 +517,8 @@ public partial class DiagramDesignerPage : Page
             Line = line,
             HitArea = hitArea,
             Arrow = arrow,
+            LabelHost = labelHost,
+            LabelText = labelText,
             SourceHandle = sourceHandle,
             TargetHandle = targetHandle
         };
@@ -532,8 +564,9 @@ public partial class DiagramDesignerPage : Page
         var points = BuildConnectionPath(visual.Connection, start, end);
         visual.Line.Points = new PointCollection(points);
         visual.HitArea.Points = new PointCollection(points);
-    SetConnectionHandlePosition(visual.SourceHandle, start);
-    SetConnectionHandlePosition(visual.TargetHandle, end);
+        SetConnectionHandlePosition(visual.SourceHandle, start);
+        SetConnectionHandlePosition(visual.TargetHandle, end);
+        UpdateConnectionLabelVisual(visual, points);
 
         var arrowBase = points.Count >= 2 ? points[^2] : start;
         var angle = Math.Atan2(end.Y - arrowBase.Y, end.X - arrowBase.X);
@@ -553,6 +586,62 @@ public partial class DiagramDesignerPage : Page
     {
         Canvas.SetLeft(handle, center.X - handle.Width / 2);
         Canvas.SetTop(handle, center.Y - handle.Height / 2);
+    }
+
+    private void UpdateConnectionLabelVisual(ConnectionVisual visual, IReadOnlyList<Point> points)
+    {
+        var label = visual.Connection.Label?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(label) || points.Count < 2)
+        {
+            visual.LabelHost.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        visual.LabelText.Text = label;
+        visual.LabelHost.Visibility = Visibility.Visible;
+        visual.LabelHost.Measure(new Size(160, double.PositiveInfinity));
+        var labelPosition = GetPolylineMidpoint(points);
+        var desiredSize = visual.LabelHost.DesiredSize;
+        Canvas.SetLeft(visual.LabelHost, labelPosition.X - desiredSize.Width / 2);
+        Canvas.SetTop(visual.LabelHost, labelPosition.Y - desiredSize.Height / 2);
+    }
+
+    private static Point GetPolylineMidpoint(IReadOnlyList<Point> points)
+    {
+        if (points.Count == 0)
+            return new Point();
+
+        if (points.Count == 1)
+            return points[0];
+
+        var totalLength = 0d;
+        for (var index = 1; index < points.Count; index++)
+            totalLength += (points[index] - points[index - 1]).Length;
+
+        if (totalLength < 0.001)
+            return points[0];
+
+        var halfLength = totalLength / 2;
+        var traversed = 0d;
+        for (var index = 1; index < points.Count; index++)
+        {
+            var start = points[index - 1];
+            var end = points[index];
+            var segmentVector = end - start;
+            var segmentLength = segmentVector.Length;
+            if (segmentLength < 0.001)
+                continue;
+
+            if (traversed + segmentLength >= halfLength)
+            {
+                var ratio = (halfLength - traversed) / segmentLength;
+                return new Point(start.X + segmentVector.X * ratio, start.Y + segmentVector.Y * ratio);
+            }
+
+            traversed += segmentLength;
+        }
+
+        return points[^1];
     }
 
     private static List<Point> BuildConnectionPath(FlowchartConnection? connection, Point start, Point end)
@@ -826,6 +915,12 @@ public partial class DiagramDesignerPage : Page
             connectionView.Arrow.Fill = isSelected
                 ? new SolidColorBrush(Color.FromRgb(37, 99, 235))
                 : new SolidColorBrush(Color.FromRgb(71, 85, 105));
+            connectionView.LabelHost.BorderBrush = isSelected
+                ? new SolidColorBrush(Color.FromRgb(37, 99, 235))
+                : new SolidColorBrush(Color.FromRgb(203, 213, 225));
+            connectionView.LabelHost.Background = isSelected
+                ? new SolidColorBrush(Color.FromArgb(245, 219, 234, 254))
+                : new SolidColorBrush(Color.FromArgb(235, 255, 255, 255));
             connectionView.SourceHandle.Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed;
             connectionView.TargetHandle.Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed;
         }
@@ -992,10 +1087,56 @@ public partial class DiagramDesignerPage : Page
     private ContextMenu CreateConnectionContextMenu(Guid connectionId)
     {
         var menu = new ContextMenu();
+        var editTextItem = new MenuItem { Header = "编辑线段文字", Tag = connectionId };
+        editTextItem.Click += OnEditConnectionLabelClick;
+        var presetMenu = new MenuItem { Header = "预设标签" };
+        foreach (var preset in ConnectionLabelPresets)
+        {
+            var presetItem = new MenuItem { Header = preset, Tag = (connectionId, preset) };
+            presetItem.Click += OnApplyConnectionPresetLabelClick;
+            presetMenu.Items.Add(presetItem);
+        }
+        var clearTextItem = new MenuItem { Header = "清空线段文字", Tag = connectionId };
+        clearTextItem.Click += OnClearConnectionLabelClick;
+        var toggleStyleItem = new MenuItem { Header = "切换直线/折线", Tag = connectionId };
+        toggleStyleItem.Click += OnToggleConnectionStyleClick;
         var deleteItem = new MenuItem { Header = "删除", Tag = connectionId };
         deleteItem.Click += OnDeleteConnectionClick;
+        menu.Items.Add(editTextItem);
+        menu.Items.Add(presetMenu);
+        menu.Items.Add(clearTextItem);
+        menu.Items.Add(toggleStyleItem);
+        menu.Items.Add(new Separator());
         menu.Items.Add(deleteItem);
+        menu.Opened += (_, _) =>
+        {
+            var connection = _document.Connections.FirstOrDefault(item => item.Id == connectionId);
+            clearTextItem.IsEnabled = connection != null && !string.IsNullOrWhiteSpace(connection.Label);
+            toggleStyleItem.Header = connection?.Style == FlowchartConnectionStyle.Straight ? "切换为折线" : "切换为直线";
+        };
         return menu;
+    }
+
+    private void OnConnectionLabelMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not Border { Tag: Guid connectionId })
+            return;
+
+        SelectConnection(connectionId);
+        if (e.ClickCount >= 2)
+        {
+            EditConnectionLabel(connectionId);
+            e.Handled = true;
+            return;
+        }
+
+        e.Handled = true;
+    }
+
+    private void OnConnectionLabelPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Border { Tag: Guid connectionId })
+            SelectConnection(connectionId);
     }
 
     private void SelectConnection(Guid connectionId)
@@ -1713,10 +1854,7 @@ public partial class DiagramDesignerPage : Page
 
         if (e.ClickCount >= 2)
         {
-            ToggleConnectionStyle(visual.Connection);
-            SelectConnection(visual.Connection.Id);
-            UpdateConnectionVisual(visual);
-            MarkDocumentDirty();
+            EditConnectionLabel(visual.Connection.Id);
             e.Handled = true;
             return;
         }
@@ -1745,6 +1883,172 @@ public partial class DiagramDesignerPage : Page
 
         _selectedConnectionId = connectionId;
         DeleteSelectedNodes();
+    }
+
+    private void OnApplyConnectionPresetLabelClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: ValueTuple<Guid, string> payload })
+            return;
+
+        ApplyConnectionLabel(payload.Item1, payload.Item2);
+    }
+
+    private void OnEditConnectionLabelClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: Guid connectionId })
+            EditConnectionLabel(connectionId);
+    }
+
+    private void OnClearConnectionLabelClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: Guid connectionId })
+            return;
+
+        var connection = _document.Connections.FirstOrDefault(item => item.Id == connectionId);
+        if (connection == null || string.IsNullOrWhiteSpace(connection.Label))
+            return;
+
+        ApplyConnectionLabel(connectionId, string.Empty);
+    }
+
+    private void OnToggleConnectionStyleClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: Guid connectionId })
+            return;
+
+        var connection = _document.Connections.FirstOrDefault(item => item.Id == connectionId);
+        if (connection == null)
+            return;
+
+        ToggleConnectionStyle(connection);
+        var visual = _connectionViews.FirstOrDefault(item => item.Connection.Id == connectionId);
+        if (visual != null)
+            UpdateConnectionVisual(visual);
+
+        SelectConnection(connectionId);
+        MarkDocumentDirty();
+    }
+
+    private void EditConnectionLabel(Guid connectionId)
+    {
+        var connection = _document.Connections.FirstOrDefault(item => item.Id == connectionId);
+        if (connection == null)
+            return;
+
+        if (!TryShowConnectionLabelDialog(connection.Label, out var newLabel))
+            return;
+
+        ApplyConnectionLabel(connectionId, newLabel);
+    }
+
+    private void ApplyConnectionLabel(Guid connectionId, string? label)
+    {
+        var connection = _document.Connections.FirstOrDefault(item => item.Id == connectionId);
+        if (connection == null)
+            return;
+
+        var normalized = label?.Trim() ?? string.Empty;
+        if (string.Equals(connection.Label, normalized, StringComparison.Ordinal))
+        {
+            SelectConnection(connectionId);
+            return;
+        }
+
+        connection.Label = normalized;
+        var visual = _connectionViews.FirstOrDefault(item => item.Connection.Id == connectionId);
+        if (visual != null)
+            UpdateConnectionVisual(visual);
+
+        SelectConnection(connectionId);
+        MarkDocumentDirty();
+    }
+
+    private bool TryShowConnectionLabelDialog(string? initialText, out string? result)
+    {
+        result = null;
+
+        var owner = Window.GetWindow(this);
+        var textBox = new TextBox
+        {
+            Text = initialText ?? string.Empty,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            MinWidth = 280,
+            MinHeight = 92,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+        };
+
+        var okButton = new Button
+        {
+            Content = "确定",
+            Width = 76,
+            Margin = new Thickness(0, 0, 8, 0),
+            IsDefault = true
+        };
+        var cancelButton = new Button
+        {
+            Content = "取消",
+            Width = 76,
+            IsCancel = true
+        };
+        var clearButton = new Button
+        {
+            Content = "清空",
+            Width = 76,
+            Margin = new Thickness(0, 0, 8, 0)
+        };
+
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+        buttonPanel.Children.Add(clearButton);
+        buttonPanel.Children.Add(okButton);
+        buttonPanel.Children.Add(cancelButton);
+
+        var root = new StackPanel { Margin = new Thickness(16) };
+        root.Children.Add(new TextBlock
+        {
+            Text = "输入显示在线段上的文字",
+            Margin = new Thickness(0, 0, 0, 8),
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.FromRgb(71, 85, 105))
+        });
+        root.Children.Add(textBox);
+        root.Children.Add(buttonPanel);
+
+        var dialog = new Window
+        {
+            Title = "编辑线段文字",
+            Content = root,
+            SizeToContent = SizeToContent.WidthAndHeight,
+            MinWidth = 360,
+            ResizeMode = ResizeMode.NoResize,
+            WindowStartupLocation = owner == null ? WindowStartupLocation.CenterScreen : WindowStartupLocation.CenterOwner,
+            Owner = owner,
+            ShowInTaskbar = false
+        };
+
+        clearButton.Click += (_, _) =>
+        {
+            textBox.Clear();
+            textBox.Focus();
+        };
+        okButton.Click += (_, _) => dialog.DialogResult = true;
+        cancelButton.Click += (_, _) => dialog.DialogResult = false;
+        dialog.Loaded += (_, _) =>
+        {
+            textBox.Focus();
+            textBox.SelectAll();
+        };
+
+        if (dialog.ShowDialog() != true)
+            return false;
+
+        result = textBox.Text;
+        return true;
     }
 
     private void ToggleConnectionStyle(FlowchartConnection connection)
@@ -2251,6 +2555,7 @@ public partial class DiagramDesignerPage : Page
             {
                 SourceNodeId = connection.SourceNodeId,
                 TargetNodeId = connection.TargetNodeId,
+                Label = connection.Label,
                 Style = connection.Style,
                 IsHorizontalFirst = connection.IsHorizontalFirst,
                 SourceAnchorSide = connection.SourceAnchorSide,
@@ -2341,6 +2646,7 @@ public partial class DiagramDesignerPage : Page
             {
                 SourceNodeId = idMap[connection.SourceNodeId],
                 TargetNodeId = idMap[connection.TargetNodeId],
+                Label = connection.Label,
                 Style = connection.Style,
                 IsHorizontalFirst = connection.IsHorizontalFirst,
                 SourceAnchorSide = connection.SourceAnchorSide,
@@ -2460,6 +2766,13 @@ public partial class DiagramDesignerPage : Page
         if (e.Key == Key.Delete)
         {
             DeleteSelectedNodes();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.F2 && _selectedConnectionId.HasValue)
+        {
+            EditConnectionLabel(_selectedConnectionId.Value);
             e.Handled = true;
             return;
         }
@@ -2758,6 +3071,7 @@ public partial class DiagramDesignerPage : Page
             {
                 SourceNodeId = idMap[connection.SourceNodeId],
                 TargetNodeId = idMap[connection.TargetNodeId],
+                Label = connection.Label,
                 Style = connection.Style,
                 IsHorizontalFirst = connection.IsHorizontalFirst,
                 SourceAnchorSide = connection.SourceAnchorSide,

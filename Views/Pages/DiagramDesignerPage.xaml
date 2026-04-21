@@ -9,6 +9,13 @@
     PreviewKeyDown="OnPagePreviewKeyDown">
 
     <Page.Resources>
+        <Style x:Key="ToolbarIconButtonStyle" TargetType="ui:Button">
+            <Setter Property="Width" Value="38"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+
         <DrawingBrush x:Key="GridBrush" TileMode="Tile" Viewport="0,0,32,32" ViewportUnits="Absolute">
             <DrawingBrush.Drawing>
                 <GeometryDrawing Brush="White">
@@ -47,14 +54,104 @@
                 Background="{DynamicResource CustomSubtleBg}">
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                 <StackPanel Orientation="Horizontal" Margin="10,8">
-                    <ui:Button Content="新建" Appearance="Primary" Click="OnNewDocument" Margin="0,0,8,0"/>
-                    <ui:Button Content="打开" Appearance="Secondary" Click="OnOpenDocument" Margin="0,0,8,0"/>
-                    <ui:Button Content="保存" Appearance="Secondary" Click="OnSaveDocument" Margin="0,0,8,0"/>
-                    <ui:Button Content="另存为" Appearance="Secondary" Click="OnSaveAsDocument" Margin="0,0,16,0"/>
-                    <ui:Button Content="开始/结束" Tag="StartEnd" Appearance="Secondary" Click="OnPaletteItemClick" PreviewMouseLeftButtonDown="OnPaletteItemMouseLeftButtonDown" PreviewMouseMove="OnPaletteItemMouseMove" Margin="0,0,8,0"/>
-                    <ui:Button Content="处理步骤" Tag="Process" Appearance="Secondary" Click="OnPaletteItemClick" PreviewMouseLeftButtonDown="OnPaletteItemMouseLeftButtonDown" PreviewMouseMove="OnPaletteItemMouseMove" Margin="0,0,8,0"/>
-                    <ui:Button Content="判断" Tag="Decision" Appearance="Secondary" Click="OnPaletteItemClick" PreviewMouseLeftButtonDown="OnPaletteItemMouseLeftButtonDown" PreviewMouseMove="OnPaletteItemMouseMove" Margin="0,0,8,0"/>
-                    <ui:Button Content="文本" Tag="Text" Appearance="Secondary" Click="OnPaletteItemClick" PreviewMouseLeftButtonDown="OnPaletteItemMouseLeftButtonDown" PreviewMouseMove="OnPaletteItemMouseMove" Margin="0,0,16,0"/>
+                    <ui:Button Appearance="Primary" Click="OnNewDocument" ToolTip="新建" Style="{StaticResource ToolbarIconButtonStyle}">
+                        <Grid Width="16" Height="16">
+                            <Rectangle Width="12" Height="2" RadiusX="1" RadiusY="1"
+                                       Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Rectangle Width="2" Height="12" RadiusX="1" RadiusY="1"
+                                       Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                    </ui:Button>
+                    <ui:Button Appearance="Secondary" Click="OnOpenDocument" ToolTip="打开" Style="{StaticResource ToolbarIconButtonStyle}">
+                        <Viewbox Width="16" Height="16">
+                            <Canvas Width="16" Height="16">
+                                <Path Data="M1,5 L5,5 L6.5,3.5 L15,3.5 L15,13.5 L1,13.5 Z"
+                                      Fill="Transparent"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.5"
+                                      StrokeLineJoin="Round"/>
+                            </Canvas>
+                        </Viewbox>
+                    </ui:Button>
+                    <ui:Button Appearance="Secondary" Click="OnSaveDocument" ToolTip="保存" Style="{StaticResource ToolbarIconButtonStyle}">
+                        <Viewbox Width="16" Height="16">
+                            <Canvas Width="16" Height="16">
+                                <Path Data="M2,2.5 L11.5,2.5 L14,5 L14,13.5 L2,13.5 Z M4.5,2.5 L4.5,6 L10.5,6 L10.5,2.5 M5,10.5 L11,10.5"
+                                      Fill="Transparent"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.4"
+                                      StrokeLineJoin="Round"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"/>
+                            </Canvas>
+                        </Viewbox>
+                    </ui:Button>
+                    <ui:Button Appearance="Secondary" Click="OnSaveAsDocument" ToolTip="另存为" Margin="0,0,16,0" Style="{StaticResource ToolbarIconButtonStyle}">
+                        <Grid Width="16" Height="16">
+                            <Viewbox Width="16" Height="16">
+                                <Canvas Width="16" Height="16">
+                                    <Path Data="M2,2.5 L11.5,2.5 L14,5 L14,13.5 L2,13.5 Z M4.5,2.5 L4.5,6 L10.5,6 L10.5,2.5 M5,10.5 L11,10.5"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                          StrokeThickness="1.4"
+                                          StrokeLineJoin="Round"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"/>
+                                </Canvas>
+                            </Viewbox>
+                            <Rectangle Width="7" Height="7" RadiusX="1" RadiusY="1"
+                                       HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                       Fill="{Binding Background, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                            <Rectangle Width="7" Height="1.6" RadiusX="0.8" RadiusY="0.8"
+                                       HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,3"
+                                       Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                            <Rectangle Width="1.6" Height="7" RadiusX="0.8" RadiusY="0.8"
+                                       HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,3,0"
+                                       Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                        </Grid>
+                    </ui:Button>
+                    <ui:Button Tag="StartEnd" Appearance="Secondary" Click="OnPaletteItemClick" PreviewMouseLeftButtonDown="OnPaletteItemMouseLeftButtonDown" PreviewMouseMove="OnPaletteItemMouseMove" ToolTip="开始/结束" Style="{StaticResource ToolbarIconButtonStyle}">
+                        <Viewbox Width="16" Height="16">
+                            <Canvas Width="16" Height="16">
+                                <Ellipse Width="12" Height="8" Canvas.Left="2" Canvas.Top="4"
+                                         Fill="Transparent"
+                                         Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                         StrokeThickness="1.5"/>
+                            </Canvas>
+                        </Viewbox>
+                    </ui:Button>
+                    <ui:Button Tag="Process" Appearance="Secondary" Click="OnPaletteItemClick" PreviewMouseLeftButtonDown="OnPaletteItemMouseLeftButtonDown" PreviewMouseMove="OnPaletteItemMouseMove" ToolTip="处理步骤" Style="{StaticResource ToolbarIconButtonStyle}">
+                        <Viewbox Width="16" Height="16">
+                            <Canvas Width="16" Height="16">
+                                <Rectangle Width="12" Height="8" Canvas.Left="2" Canvas.Top="4"
+                                           RadiusX="1" RadiusY="1"
+                                           Fill="Transparent"
+                                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                           StrokeThickness="1.5"/>
+                            </Canvas>
+                        </Viewbox>
+                    </ui:Button>
+                    <ui:Button Tag="Decision" Appearance="Secondary" Click="OnPaletteItemClick" PreviewMouseLeftButtonDown="OnPaletteItemMouseLeftButtonDown" PreviewMouseMove="OnPaletteItemMouseMove" ToolTip="判断" Style="{StaticResource ToolbarIconButtonStyle}">
+                        <Viewbox Width="16" Height="16">
+                            <Canvas Width="16" Height="16">
+                                <Polygon Points="8,2 14,8 8,14 2,8"
+                                         Fill="Transparent"
+                                         Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                         StrokeThickness="1.5"
+                                         StrokeLineJoin="Round"/>
+                            </Canvas>
+                        </Viewbox>
+                    </ui:Button>
+                    <ui:Button Tag="Text" Appearance="Secondary" Click="OnPaletteItemClick" PreviewMouseLeftButtonDown="OnPaletteItemMouseLeftButtonDown" PreviewMouseMove="OnPaletteItemMouseMove" ToolTip="文本" Margin="0,0,16,0" Style="{StaticResource ToolbarIconButtonStyle}">
+                        <TextBlock Text="T"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
+                                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </ui:Button>
                     <ui:Button Content="连接选中" Appearance="Secondary" Click="OnConnectSelected" Margin="0,0,8,0"/>
                     <ui:Button Content="删除选中" Appearance="Secondary" Click="OnDeleteSelected" Margin="0,0,16,0"/>
                     <ui:Button Content="全选" Appearance="Secondary" Click="OnSelectAll" Margin="0,0,16,0"/>

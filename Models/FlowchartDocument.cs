@@ -45,6 +45,7 @@ public class FlowchartConnection
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid SourceNodeId { get; set; }
     public Guid TargetNodeId { get; set; }
+    public string Label { get; set; } = string.Empty;
     public FlowchartConnectionStyle Style { get; set; } = FlowchartConnectionStyle.Orthogonal;
     public bool? IsHorizontalFirst { get; set; }
     public List<FlowchartConnectionControlPoint> ControlPoints { get; set; } = new();
