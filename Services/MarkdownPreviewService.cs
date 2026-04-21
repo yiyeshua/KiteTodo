@@ -78,12 +78,15 @@ public class MarkdownPreviewService
             display: block;
         }
 
-        .page.with-toc .article {
-            margin-right: 212px;
+        .page.with-toc .reader-shell {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 176px;
+            column-gap: 12px;
+            align-items: start;
         }
 
-        .page.without-toc .article {
-            margin-right: 0;
+        .page.without-toc .reader-shell {
+            display: block;
         }
 
         .article {
@@ -94,10 +97,8 @@ public class MarkdownPreviewService
 
         .toc {
             width: 176px;
-            position: fixed;
-            right: 14px;
-            top: 12px;
-            bottom: 12px;
+            position: sticky;
+            top: 0;
             padding: 12px 10px 10px;
             border: 1px solid #e5e7eb;
             border-radius: 12px;
@@ -105,7 +106,8 @@ public class MarkdownPreviewService
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
             overflow-y: auto;
             box-sizing: border-box;
-            z-index: 5;
+            max-height: calc(100vh - 64px);
+            align-self: start;
         }
 
         .toc.is-hidden {
@@ -236,8 +238,8 @@ public class MarkdownPreviewService
 
         table {
             border-collapse: collapse;
-            width: max-content;
-            min-width: 100%;
+            width: 100%;
+            max-width: 100%;
             table-layout: auto;
         }
 
@@ -246,7 +248,9 @@ public class MarkdownPreviewService
             padding: 10px 12px;
             text-align: left;
             vertical-align: top;
+            min-width: 0;
             white-space: normal;
+            overflow-wrap: anywhere;
             word-break: break-word;
         }
 

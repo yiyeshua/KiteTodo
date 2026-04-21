@@ -34,14 +34,14 @@
                         <ui:SymbolIcon Symbol="CalendarMonth24"/>
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="事项池" TargetPageType="{x:Type pages:BacklogPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Archive24"/>
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="专注计时" TargetPageType="{x:Type pages:PomodoroPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Timer24"/>
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="数据导出" TargetPageType="{x:Type pages:ExportPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="ArrowExportUp24"/>
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="全局搜索" TargetPageType="{x:Type pages:SearchPage}">
@@ -49,14 +49,9 @@
                         <ui:SymbolIcon Symbol="Search24"/>
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="Markdown 阅读" TargetPageType="{x:Type pages:MarkdownReaderPage}">
+                <ui:NavigationViewItem Content="MD阅读" TargetPageType="{x:Type pages:MarkdownReaderPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="BookOpen24"/>
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="事项池" TargetPageType="{x:Type pages:BacklogPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Archive24"/>
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="流程设计" TargetPageType="{x:Type pages:DiagramDesignerPage}">
@@ -67,6 +62,11 @@
                 <ui:NavigationViewItem Content="记事本" TargetPageType="{x:Type pages:NotebookPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="NoteEdit24"/>
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="数据导出" TargetPageType="{x:Type pages:ExportPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="ArrowExportUp24"/>
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
