@@ -164,14 +164,16 @@ public static class AlertService
         {
             var screen = SystemParameters.WorkArea;
             const double width = 300;
-            const double height = 72;
+            const double height = 96;
             const double margin = 20;
+
+            var (title, body) = SplitToastMessage(message);
 
             var toast = new Window
             {
                 WindowStyle = WindowStyle.None,
-                AllowsTransparency = true,
-                Background = Brushes.Transparent,
+                AllowsTransparency = false,
+                Background = new SolidColorBrush(Color.FromRgb(32, 36, 43)),
                 Topmost = true,
                 ShowInTaskbar = false,
                 ShowActivated = false,
@@ -182,11 +184,9 @@ public static class AlertService
                 ResizeMode = ResizeMode.NoResize
             };
 
-            var border = new Border
+            var root = new Grid
             {
-                CornerRadius = new CornerRadius(14),
-                Background = new SolidColorBrush(Color.FromArgb(242, 40, 44, 52)),
-                Padding = new Thickness(18, 14, 18, 14),
+                Margin = new Thickness(1),
                 Effect = new System.Windows.Media.Effects.DropShadowEffect
                 {
                     BlurRadius = 18,
@@ -196,16 +196,42 @@ public static class AlertService
                 }
             };
 
-            border.Child = new TextBlock
+            var border = new Border
             {
-                Text = message,
-                FontSize = 14,
-                Foreground = Brushes.White,
-                VerticalAlignment = VerticalAlignment.Center,
-                TextWrapping = TextWrapping.Wrap
+                CornerRadius = new CornerRadius(14),
+                Background = new SolidColorBrush(Color.FromRgb(40, 44, 52)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(58, 63, 74)),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(16, 14, 16, 14)
             };
 
-            toast.Content = border;
+            var panel = new StackPanel();
+            panel.Children.Add(new TextBlock
+            {
+                Text = title,
+                FontSize = 14,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = Brushes.White,
+                TextWrapping = TextWrapping.Wrap
+            });
+
+            if (!string.IsNullOrWhiteSpace(body))
+            {
+                panel.Children.Add(new TextBlock
+                {
+                    Text = body,
+                    Margin = new Thickness(0, 6, 0, 0),
+                    FontSize = 12,
+                    Foreground = new SolidColorBrush(Color.FromRgb(208, 214, 224)),
+                    TextWrapping = TextWrapping.Wrap,
+                    MaxHeight = 38
+                });
+            }
+
+            border.Child = panel;
+            root.Children.Add(border);
+
+            toast.Content = root;
 
             toast.Opacity = 0;
             toast.Loaded += (_, _) =>
@@ -233,5 +259,24 @@ public static class AlertService
         {
             // 静默忽略
         }
+    }
+
+    private static (string Title, string? Body) SplitToastMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return ("提醒", null);
+
+        var lines = message
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .ToList();
+
+        if (lines.Count == 0)
+            return ("提醒", null);
+
+        if (lines.Count == 1)
+            return (lines[0], null);
+
+        return (lines[0], string.Join("  ", lines.Skip(1)));
     }
 }

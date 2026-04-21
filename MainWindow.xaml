@@ -49,6 +49,11 @@
                         <ui:SymbolIcon Symbol="Search24"/>
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="Markdown 阅读" TargetPageType="{x:Type pages:MarkdownReaderPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="BookOpen24"/>
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="事项池" TargetPageType="{x:Type pages:BacklogPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Archive24"/>

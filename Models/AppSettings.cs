@@ -46,6 +46,9 @@ public class AppSettings
     /// <summary>用户自定义的标签列表（预定义标签之外的）</summary>
     public List<string> CustomTags { get; set; } = new();
 
+    /// <summary>Markdown 阅读页是否默认打开为源码模式</summary>
+    public bool MarkdownReaderSourceMode { get; set; }
+
     // 以下字段为历史遗留（浮窗功能已移除），保留以避免数据库迁移问题
     public bool ShowMiniWindow { get; set; }
     public double MiniWindowX { get; set; } = 100;

@@ -1,0 +1,188 @@
+<Page x:Class="KiteTodo.Views.Pages.MarkdownReaderPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      Title="Markdown 阅读"
+      Language="zh-CN"
+      AllowDrop="True"
+    PreviewKeyDown="OnPreviewKeyDown"
+      DragOver="OnDragOver"
+      Drop="OnDropFile">
+
+    <Grid Margin="24,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Margin="0,0,0,10" Padding="12,8" CornerRadius="10"
+                Background="{DynamicResource CustomCardBg}" BorderThickness="1"
+                BorderBrush="{DynamicResource CustomSubtleBorder}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="Markdown 阅读" FontSize="18" FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource CustomFg}"/>
+
+                <TextBlock Grid.Column="2" x:Name="FileInfoText"
+                           VerticalAlignment="Center"
+                           FontSize="12"
+                           Text="还没有打开 Markdown 文件 · 支持 .md、.markdown、.txt"
+                           TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource CustomFgSecondary}"/>
+
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
+                    <ui:Button x:Name="ToggleModeButton" Content="查看源码" Appearance="Secondary" Click="OnToggleMode" IsEnabled="False" Margin="0,0,8,0" Padding="12,6" FontSize="12"/>
+                    <ui:Button Content="打开文件" Appearance="Primary" Click="OnOpenFile" Margin="0,0,8,0" Padding="14,6" FontSize="12"/>
+                    <ui:Button x:Name="SaveButton" Content="保存" Appearance="Secondary" Click="OnSaveFile" IsEnabled="False" Margin="0,0,8,0" Padding="12,6" FontSize="12"/>
+                    <ui:Button x:Name="ReloadButton" Content="重新加载" Appearance="Secondary" Click="OnReloadFile" IsEnabled="False" Padding="12,6" FontSize="12"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Border x:Name="EmptyStatePanel"
+                    CornerRadius="14"
+                    Background="{DynamicResource CustomCardBg}"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource CustomSubtleBorder}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <ui:SymbolIcon Symbol="BookOpen24" FontSize="48" Opacity="0.25" HorizontalAlignment="Center"/>
+                    <TextBlock Text="打开一个 Markdown 文件开始阅读"
+                               Margin="0,12,0,0"
+                               FontSize="16"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource CustomFg}"/>
+                    <TextBlock Text="你也可以把文件直接拖到这个页面。"
+                               Margin="0,6,0,0"
+                               FontSize="12"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource CustomFgSecondary}"/>
+                </StackPanel>
+            </Border>
+
+            <Border x:Name="PreviewHost"
+                    Visibility="Collapsed"
+                    CornerRadius="14"
+                    ClipToBounds="True"
+                    Background="White"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource CustomSubtleBorder}">
+                <WebBrowser x:Name="PreviewBrowser"/>
+            </Border>
+
+            <Border x:Name="SourceHost"
+                    Visibility="Collapsed"
+                    CornerRadius="14"
+                    Background="{DynamicResource CustomCardBg}"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource CustomSubtleBorder}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2.3*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="1.1*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox x:Name="SourceTextBox"
+                             Grid.Column="0"
+                             AcceptsReturn="True"
+                             AcceptsTab="True"
+                             TextWrapping="NoWrap"
+                             HorizontalScrollBarVisibility="Auto"
+                             VerticalScrollBarVisibility="Auto"
+                             Padding="18,16"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             Foreground="{DynamicResource CustomFg}"
+                             FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI"
+                             FontSize="13"
+                             TextChanged="OnSourceTextChanged"/>
+
+                    <Border Grid.Column="1"
+                            Width="1"
+                            Background="{DynamicResource CustomSubtleBorder}"/>
+
+                    <ScrollViewer Grid.Column="2"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="16,14,16,16">
+                            <TextBlock Text="Markdown 常用语法" FontSize="16" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource CustomFg}"/>
+
+                            <Border Margin="0,12,0,0" Padding="10" CornerRadius="8"
+                                    Background="{DynamicResource CustomSubtleBg}">
+                                <StackPanel>
+                                    <TextBlock Text="标题" FontWeight="SemiBold"/>
+                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="# 一级标题&#10;## 二级标题&#10;### 三级标题"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Margin="0,10,0,0" Padding="10" CornerRadius="8"
+                                    Background="{DynamicResource CustomSubtleBg}">
+                                <StackPanel>
+                                    <TextBlock Text="列表" FontWeight="SemiBold"/>
+                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="- 无序项&#10;- 第二项&#10;&#10;1. 有序项&#10;2. 第二项"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Margin="0,10,0,0" Padding="10" CornerRadius="8"
+                                    Background="{DynamicResource CustomSubtleBg}">
+                                <StackPanel>
+                                    <TextBlock Text="任务列表" FontWeight="SemiBold"/>
+                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="- [ ] 待完成&#10;- [x] 已完成"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Margin="0,10,0,0" Padding="10" CornerRadius="8"
+                                    Background="{DynamicResource CustomSubtleBg}">
+                                <StackPanel>
+                                    <TextBlock Text="强调" FontWeight="SemiBold"/>
+                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="**加粗**&#10;*斜体*&#10;`行内代码`"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Margin="0,10,0,0" Padding="10" CornerRadius="8"
+                                    Background="{DynamicResource CustomSubtleBg}">
+                                <StackPanel>
+                                    <TextBlock Text="链接和图片" FontWeight="SemiBold"/>
+                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="[链接文字](https://example.com)&#10;![图片说明](image.png)"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Margin="0,10,0,0" Padding="10" CornerRadius="8"
+                                    Background="{DynamicResource CustomSubtleBg}">
+                                <StackPanel>
+                                    <TextBlock Text="引用和分隔线" FontWeight="SemiBold"/>
+                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="> 这是一段引用&#10;&#10;---"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Margin="0,10,0,0" Padding="10" CornerRadius="8"
+                                    Background="{DynamicResource CustomSubtleBg}">
+                                <StackPanel>
+                                    <TextBlock Text="代码块" FontWeight="SemiBold"/>
+                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="```csharp&#10;Console.WriteLine(&quot;Hello&quot;);&#10;```"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Margin="0,10,0,0" Padding="10" CornerRadius="8"
+                                    Background="{DynamicResource CustomSubtleBg}">
+                                <StackPanel>
+                                    <TextBlock Text="表格" FontWeight="SemiBold"/>
+                                    <TextBlock Margin="0,6,0,0" FontFamily="Cascadia Code,Consolas,Microsoft YaHei UI" Text="| 名称 | 说明 |&#10;| --- | --- |&#10;| A | 内容 |"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Page>
