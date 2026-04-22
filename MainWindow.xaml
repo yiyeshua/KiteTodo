@@ -59,6 +59,11 @@
                         <ui:SymbolIcon Symbol="ArrowBidirectionalLeftRight24"/>
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="工具集合" TargetPageType="{x:Type pages:ToolCollectionPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="TaskListAdd24"/>
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="记事本" TargetPageType="{x:Type pages:NotebookPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="NoteEdit24"/>

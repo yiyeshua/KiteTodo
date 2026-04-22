@@ -1,0 +1,210 @@
+<UserControl x:Class="KiteTodo.Views.Tools.BitValueCalculatorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             Language="zh-CN">
+
+    <UserControl.Resources>
+        <Style x:Key="ResultCardStyle" TargetType="Border">
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CustomSubtleBorder}"/>
+            <Setter Property="Background" Value="{DynamicResource CustomSubtleBg}"/>
+            <Setter Property="Margin" Value="0,0,10,10"/>
+        </Style>
+
+        <Style x:Key="BitCardStyle" TargetType="Border">
+            <Setter Property="Margin" Value="0,0,8,8"/>
+            <Setter Property="Padding" Value="8,8,8,10"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CustomSubtleBorder}"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style x:Key="BitInputStyle" TargetType="TextBox">
+            <Setter Property="Width" Value="38"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Margin" Value="0,6,0,0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="#FFFFFFFF"/>
+            <Setter Property="BorderBrush" Value="#FFB8C2CF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="MaxLength" Value="1"/>
+            <Style.Triggers>
+                <Trigger Property="Text" Value="1">
+                    <Setter Property="Background" Value="#FFE0F2FE"/>
+                    <Setter Property="BorderBrush" Value="#FF4DA3FF"/>
+                    <Setter Property="Foreground" Value="#FF0F4C81"/>
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="#FF2563EB"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ResultInputStyle" TargetType="TextBox">
+            <Setter Property="Margin" Value="0,6,0,0"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#FFD9E1EA"/>
+            <Setter Property="Background" Value="#FFF9FBFD"/>
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource CustomFg}"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Style.Triggers>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="Background" Value="#FFFFFFFF"/>
+                    <Setter Property="BorderBrush" Value="#FF3B82F6"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="BinaryInputStyle" TargetType="TextBox" BasedOn="{StaticResource ResultInputStyle}">
+            <Setter Property="Margin" Value="0,8,0,0"/>
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="FontFamily" Value="Cascadia Code,Consolas,Microsoft YaHei UI"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="14,14,8,14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="168"/>
+                <ColumnDefinition Width="236"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource ResultCardStyle}">
+                <StackPanel>
+                    <DockPanel>
+                        <TextBlock Text="十进制" FontSize="11.5" Foreground="{DynamicResource CustomFgSecondary}"/>
+                        <ui:Button DockPanel.Dock="Right"
+                                   Content="复制"
+                                   Tag="decimal"
+                                   Click="OnCopyResult"
+                                   Padding="8,2"
+                                   FontSize="11"
+                                   Appearance="Secondary"/>
+                    </DockPanel>
+                    <TextBox x:Name="DecimalResultTextBox"
+                             Style="{StaticResource ResultInputStyle}"
+                             TextChanged="OnDecimalResultTextChanged"
+                             GotKeyboardFocus="OnResultTextBoxGotKeyboardFocus"
+                             LostKeyboardFocus="OnResultTextBoxLostKeyboardFocus"
+                             PreviewTextInput="OnDecimalPreviewTextInput"
+                             DataObject.Pasting="OnDecimalTextBoxPasting"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="1" Style="{StaticResource ResultCardStyle}">
+                <StackPanel>
+                    <DockPanel>
+                        <TextBlock Text="十六进制" FontSize="11.5" Foreground="{DynamicResource CustomFgSecondary}"/>
+                        <ui:Button DockPanel.Dock="Right"
+                                   Content="复制"
+                                   Tag="hex"
+                                   Click="OnCopyResult"
+                                   Padding="8,2"
+                                   FontSize="11"
+                                   Appearance="Secondary"/>
+                        <TextBlock x:Name="FormattedHexTextBlock"
+                                   Margin="8,0,0,0"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Center"
+                                   FontSize="11.5"
+                                   FontWeight="SemiBold"
+                                   Foreground="#FF2563EB"/>
+                    </DockPanel>
+                    <TextBox x:Name="HexResultTextBox"
+                             Style="{StaticResource ResultInputStyle}"
+                             TextChanged="OnHexResultTextChanged"
+                             GotKeyboardFocus="OnResultTextBoxGotKeyboardFocus"
+                             LostKeyboardFocus="OnResultTextBoxLostKeyboardFocus"
+                             PreviewTextInput="OnHexPreviewTextInput"
+                             DataObject.Pasting="OnHexTextBoxPasting"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource ResultCardStyle}" Margin="0,0,0,10">
+                <StackPanel>
+                    <DockPanel>
+                        <TextBlock Text="二进制预览" FontSize="11.5" Foreground="{DynamicResource CustomFgSecondary}"/>
+                        <ui:Button DockPanel.Dock="Right"
+                                   Content="复制"
+                                   Tag="binary"
+                                   Click="OnCopyResult"
+                                   Padding="8,2"
+                                   FontSize="11"
+                                   Appearance="Secondary"/>
+                    </DockPanel>
+                    <TextBox x:Name="BinaryPreviewTextBox"
+                             Style="{StaticResource BinaryInputStyle}"
+                             TextChanged="OnBinaryPreviewTextChanged"
+                             GotKeyboardFocus="OnResultTextBoxGotKeyboardFocus"
+                             LostKeyboardFocus="OnResultTextBoxLostKeyboardFocus"
+                             PreviewTextInput="OnBinaryPreviewTextInput"
+                             DataObject.Pasting="OnBinaryTextBoxPasting"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+            <ui:Button Content="全 0" Appearance="Secondary" Click="OnSetAllZero" Margin="0,0,8,0" Padding="12,5"/>
+            <ui:Button Content="全 1" Appearance="Secondary" Click="OnSetAllOne" Margin="0,0,8,0" Padding="12,5"/>
+            <ui:Button Content="取反" Appearance="Secondary" Click="OnInvertBits" Margin="0,0,8,0" Padding="12,5"/>
+            <ui:Button Content="批量导入" Appearance="Secondary" Click="OnBulkImport" Margin="0,0,8,0" Padding="12,5"/>
+        </StackPanel>
+
+        <ItemsControl Grid.Row="2" x:Name="BitSlotsItemsControl" ItemsSource="{Binding BitSlots}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="10"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Style="{StaticResource BitCardStyle}"
+                            Tag="{Binding}"
+                            MouseLeftButtonDown="OnBitCardMouseLeftButtonDown">
+                        <StackPanel>
+                            <TextBlock Text="{Binding BoxLabel}"
+                                       HorizontalAlignment="Center"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource CustomFg}"/>
+                            <TextBlock Text="{Binding BitLabel}"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,2,0,0"
+                                       FontSize="10.5"
+                                       Foreground="{DynamicResource CustomFgSecondary}"/>
+                            <TextBox Style="{StaticResource BitInputStyle}"
+                                     Text="{Binding ValueText, UpdateSourceTrigger=PropertyChanged}"
+                                     Tag="{Binding}"
+                                     HorizontalAlignment="Center"
+                                     PreviewTextInput="OnBitTextInput"
+                                     PreviewKeyDown="OnBitPreviewKeyDown"
+                                     TextChanged="OnBitTextChanged"
+                                     GotKeyboardFocus="OnBitTextBoxGotKeyboardFocus"
+                                     DataObject.Pasting="OnBitTextBoxPasting"/>
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</UserControl>
