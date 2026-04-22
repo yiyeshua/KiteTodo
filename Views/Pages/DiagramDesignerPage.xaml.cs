@@ -55,7 +55,7 @@ public partial class DiagramDesignerPage : Page
     private sealed class ConnectionVisual
     {
         public required FlowchartConnection Connection { get; init; }
-        public required Polyline Line { get; init; }
+        public required System.Windows.Shapes.Path Line { get; init; }
         public required Polyline HitArea { get; init; }
         public required Polygon Arrow { get; init; }
         public required Border LabelHost { get; init; }
@@ -448,7 +448,7 @@ public partial class DiagramDesignerPage : Page
 
     private void CreateConnectionVisual(FlowchartConnection connection)
     {
-        var line = new Polyline
+        var line = new System.Windows.Shapes.Path
         {
             Stroke = new SolidColorBrush(Color.FromRgb(71, 85, 105)),
             StrokeThickness = 2,
@@ -483,11 +483,11 @@ public partial class DiagramDesignerPage : Page
         };
         var labelHost = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(235, 255, 255, 255)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(203, 213, 225)),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(8, 3, 8, 3),
+            Background = Brushes.Transparent,
+            BorderBrush = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            CornerRadius = new CornerRadius(0),
+            Padding = new Thickness(2, 0, 2, 0),
             Child = labelText,
             Cursor = Cursors.IBeam,
             Visibility = Visibility.Collapsed,
@@ -562,7 +562,6 @@ public partial class DiagramDesignerPage : Page
     var end = GetConnectionAnchorPoint(target, visual.Connection.TargetAnchorSide, visual.Connection.TargetAnchorCoordinate, sourceCenter);
 
         var points = BuildConnectionPath(visual.Connection, start, end);
-        visual.Line.Points = new PointCollection(points);
         visual.HitArea.Points = new PointCollection(points);
         SetConnectionHandlePosition(visual.SourceHandle, start);
         SetConnectionHandlePosition(visual.TargetHandle, end);
@@ -594,6 +593,7 @@ public partial class DiagramDesignerPage : Page
         if (string.IsNullOrWhiteSpace(label) || points.Count < 2)
         {
             visual.LabelHost.Visibility = Visibility.Collapsed;
+            visual.Line.Data = BuildConnectionPathGeometry(points, 0);
             return;
         }
 
@@ -604,6 +604,122 @@ public partial class DiagramDesignerPage : Page
         var desiredSize = visual.LabelHost.DesiredSize;
         Canvas.SetLeft(visual.LabelHost, labelPosition.X - desiredSize.Width / 2);
         Canvas.SetTop(visual.LabelHost, labelPosition.Y - desiredSize.Height / 2);
+        var gapLength = Math.Max(12, desiredSize.Width * 0.58);
+        visual.Line.Data = BuildConnectionPathGeometry(points, gapLength);
+    }
+
+    private static Geometry BuildConnectionPathGeometry(IReadOnlyList<Point> points, double gapLength)
+    {
+        if (points.Count < 2)
+            return Geometry.Empty;
+
+        var totalLength = GetPolylineLength(points);
+        if (gapLength <= 0 || totalLength <= gapLength + 1)
+            return CreatePathGeometry(points);
+
+        var middle = totalLength / 2;
+        var gapStart = Math.Max(0, middle - gapLength / 2);
+        var gapEnd = Math.Min(totalLength, middle + gapLength / 2);
+
+        var beforePoints = SlicePolyline(points, 0, gapStart);
+        var afterPoints = SlicePolyline(points, gapEnd, totalLength);
+        var geometry = new PathGeometry();
+
+        AppendPathFigure(geometry, beforePoints);
+        AppendPathFigure(geometry, afterPoints);
+        return geometry;
+    }
+
+    private static Geometry CreatePathGeometry(IReadOnlyList<Point> points)
+    {
+        var geometry = new PathGeometry();
+        AppendPathFigure(geometry, points);
+        return geometry;
+    }
+
+    private static void AppendPathFigure(PathGeometry geometry, IReadOnlyList<Point> points)
+    {
+        if (points.Count < 2)
+            return;
+
+        geometry.Figures.Add(new PathFigure
+        {
+            StartPoint = points[0],
+            IsClosed = false,
+            IsFilled = false,
+            Segments =
+            {
+                new PolyLineSegment(new PointCollection(points.Skip(1)), true)
+            }
+        });
+    }
+
+    private static double GetPolylineLength(IReadOnlyList<Point> points)
+    {
+        var total = 0d;
+        for (var index = 1; index < points.Count; index++)
+            total += (points[index] - points[index - 1]).Length;
+
+        return total;
+    }
+
+    private static List<Point> SlicePolyline(IReadOnlyList<Point> points, double startDistance, double endDistance)
+    {
+        const double epsilon = 0.001;
+        var result = new List<Point>();
+        if (points.Count < 2 || endDistance <= startDistance)
+            return result;
+
+        var traversed = 0d;
+        for (var index = 1; index < points.Count; index++)
+        {
+            var segmentStart = points[index - 1];
+            var segmentEnd = points[index];
+            var segmentVector = segmentEnd - segmentStart;
+            var segmentLength = segmentVector.Length;
+            if (segmentLength < epsilon)
+                continue;
+
+            var segmentStartDistance = traversed;
+            var segmentEndDistance = traversed + segmentLength;
+            var overlapStart = Math.Max(startDistance, segmentStartDistance);
+            var overlapEnd = Math.Min(endDistance, segmentEndDistance);
+            if (overlapEnd < overlapStart - epsilon)
+            {
+                traversed = segmentEndDistance;
+                continue;
+            }
+
+            var startRatio = (overlapStart - segmentStartDistance) / segmentLength;
+            var endRatio = (overlapEnd - segmentStartDistance) / segmentLength;
+            var sliceStart = new Point(
+                segmentStart.X + segmentVector.X * startRatio,
+                segmentStart.Y + segmentVector.Y * startRatio);
+            var sliceEnd = new Point(
+                segmentStart.X + segmentVector.X * endRatio,
+                segmentStart.Y + segmentVector.Y * endRatio);
+
+            AddPointIfNeeded(result, sliceStart);
+            AddPointIfNeeded(result, sliceEnd);
+            traversed = segmentEndDistance;
+        }
+
+        return result;
+    }
+
+    private static void AddPointIfNeeded(ICollection<Point> points, Point point)
+    {
+        if (points.Count == 0)
+        {
+            points.Add(point);
+            return;
+        }
+
+        var last = points.Last();
+        if ((last - point).Length < 0.001)
+            return;
+
+        points.Add(point);
     }
 
     private static Point GetPolylineMidpoint(IReadOnlyList<Point> points)
@@ -915,12 +1031,9 @@ public partial class DiagramDesignerPage : Page
             connectionView.Arrow.Fill = isSelected
                 ? new SolidColorBrush(Color.FromRgb(37, 99, 235))
                 : new SolidColorBrush(Color.FromRgb(71, 85, 105));
-            connectionView.LabelHost.BorderBrush = isSelected
-                ? new SolidColorBrush(Color.FromRgb(37, 99, 235))
-                : new SolidColorBrush(Color.FromRgb(203, 213, 225));
-            connectionView.LabelHost.Background = isSelected
-                ? new SolidColorBrush(Color.FromArgb(245, 219, 234, 254))
-                : new SolidColorBrush(Color.FromArgb(235, 255, 255, 255));
+            connectionView.LabelText.Foreground = isSelected
+                ? new SolidColorBrush(Color.FromRgb(29, 78, 216))
+                : new SolidColorBrush(Color.FromRgb(31, 41, 55));
             connectionView.SourceHandle.Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed;
             connectionView.TargetHandle.Visibility = isSelected ? Visibility.Visible : Visibility.Collapsed;
         }
