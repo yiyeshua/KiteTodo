@@ -49,10 +49,10 @@ public partial class ToolCollectionPage : Page
         {
             Key = "tool-2",
             Badge = "2",
-            Title = "工具2",
-            Subtitle = "预留入口",
+            Title = "二维码助手",
+            Subtitle = "二维码生成、中心 Logo 叠加与图片解析",
             AccentBrush = CreateBrush("#3B82F6"),
-            ViewFactory = () => BuildPlaceholderToolView("工具2", "这里预留给工具2，后面按同样方式接入。")
+            ViewFactory = static () => new QrToolView()
         });
         _tools.Add(new ToolEntry
         {
