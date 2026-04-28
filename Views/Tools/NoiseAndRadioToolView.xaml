@@ -1,0 +1,335 @@
+<UserControl x:Class="KiteTodo.Views.Tools.NoiseAndRadioToolView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             Language="zh-CN">
+
+    <UserControl.Resources>
+        <Style x:Key="PanelCardStyle" TargetType="Border">
+            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CustomSubtleBorder}"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource CustomFg}"/>
+        </Style>
+
+        <Style x:Key="SectionHintStyle" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,4,0,0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource CustomFgSecondary}"/>
+            <Setter Property="Opacity" Value="0.72"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20,12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320"/>
+            <ColumnDefinition Width="16"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0"
+                Style="{StaticResource PanelCardStyle}"
+                Background="{DynamicResource CustomSubtleBg}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="电台列表"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource CustomFg}"/>
+
+                    <ui:Button x:Name="FavoritesToggleButton"
+                               Grid.Column="1"
+                               Content="收藏列表"
+                               Appearance="Secondary"
+                               Padding="12,5"
+                               Click="OnToggleFavoritesView"/>
+                </Grid>
+
+                <Grid Grid.Row="1" Margin="0,10,0,0">
+                    <ListBox x:Name="RadioPresetsListBox"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Padding="2,0,2,2"
+                         SelectionChanged="OnRadioPresetSelectionChanged"
+                         MouseDoubleClick="OnRadioPresetMouseDoubleClick">
+                        <ListBox.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="恢复默认电台"
+                                          Click="OnRestoreDefaultPresets"/>
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Padding" Value="2"/>
+                            <Setter Property="Margin" Value="0,0,0,1"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border x:Name="PresetItemBorder"
+                                    Padding="8,5"
+                                    CornerRadius="7"
+                                    Background="{DynamicResource CustomCardBg}"
+                                    BorderThickness="1"
+                                    BorderBrush="{DynamicResource CustomSubtleBorder}">
+                                <Border.ContextMenu>
+                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                        <MenuItem Header="收藏/取消收藏"
+                                                  Click="OnToggleFavoritePreset"/>
+                                        <MenuItem Header="置顶/取消置顶"
+                                                  Click="OnTogglePinPreset"/>
+                                        <MenuItem Header="重命名"
+                                                  Click="OnRenamePreset"/>
+                                        <MenuItem Header="恢复默认电台"
+                                                  Click="OnRestoreDefaultPresets"/>
+                                        <Separator/>
+                                        <MenuItem Header="删除"
+                                                  Click="OnDeletePreset"/>
+                                    </ContextMenu>
+                                </Border.ContextMenu>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel>
+                                        <WrapPanel>
+                                            <TextBlock Text="{Binding Name}"
+                                                   FontSize="12.5"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Foreground="{DynamicResource CustomFg}"/>
+                                        </WrapPanel>
+
+                                        <Border Margin="0,2,0,0"
+                                                Padding="5,1"
+                                                HorizontalAlignment="Left"
+                                                CornerRadius="8"
+                                                Background="#FFF4D6">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding MarkerLabel}" Value="">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="{Binding MarkerLabel}"
+                                                       FontSize="9"
+                                                       Foreground="#A16207"/>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <Border Grid.Column="1"
+                                            Margin="8,0,0,0"
+                                            Padding="7,2"
+                                            VerticalAlignment="Center"
+                                            CornerRadius="10"
+                                            Background="#EEF4FB">
+                                        <TextBlock Text="{Binding StatusLabel}"
+                                                   FontSize="10"
+                                                   Foreground="#5F7288"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                             Value="True">
+                                    <Setter TargetName="PresetItemBorder" Property="Background" Value="#EAF4FF"/>
+                                    <Setter TargetName="PresetItemBorder" Property="BorderBrush" Value="#4DA3FF"/>
+                                    <Setter TargetName="PresetItemBorder" Property="BorderThickness" Value="2"/>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Border x:Name="FavoritesEmptyStateBorder"
+                            Visibility="Collapsed"
+                            Margin="10,16,10,16"
+                            Padding="16,14"
+                            CornerRadius="12"
+                            BorderThickness="1"
+                            BorderBrush="#D6E2F1"
+                            Background="#F8FBFE"
+                            IsHitTestVisible="False">
+                        <StackPanel>
+                            <TextBlock Text="收藏列表为空"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource CustomFg}"/>
+                            <TextBlock Text="右键任意电台选择“收藏/取消收藏”后，这里会显示你常用的电台。"
+                                       Margin="0,8,0,0"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource CustomFgSecondary}"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <StackPanel Grid.Row="2" Margin="4,2,4,0">
+                    <DockPanel Margin="0,0,0,8">
+                        <ui:Button x:Name="PreviousPageButton"
+                                   DockPanel.Dock="Left"
+                                   Content="◀"
+                                   Appearance="Secondary"
+                                   Width="32"
+                                   Padding="0"
+                                   Click="OnPreviousPage"/>
+                        <ui:Button x:Name="NextPageButton"
+                                   DockPanel.Dock="Right"
+                                   Content="▶"
+                                   Appearance="Secondary"
+                                   Width="32"
+                                   Padding="0"
+                                   Click="OnNextPage"/>
+                        <TextBlock x:Name="PageInfoTextBlock"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   Foreground="{DynamicResource CustomFgSecondary}"
+                                   Text="第 1 / 1 页，共 0 条"/>
+                    </DockPanel>
+
+                    <ui:Button Content="+ 新增电台源"
+                               Appearance="Primary"
+                               HorizontalAlignment="Stretch"
+                               Click="OnAddPreset"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <GridSplitter Grid.Column="1"
+                      Width="4"
+                      Background="Transparent"
+                      ShowsPreview="True"
+                      ResizeBehavior="PreviousAndNext"
+                      ResizeDirection="Columns"
+                      HorizontalAlignment="Center"/>
+
+        <Border Grid.Column="2" Style="{StaticResource PanelCardStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0">
+                    <TextBlock Text="播放信息"
+                               Style="{StaticResource SectionTitleStyle}"/>
+                    <TextBlock Text="当前阶段先保留简单信息区，后续右栏可以继续扩展成歌词、封面或更多电台详情。"
+                               Style="{StaticResource SectionHintStyle}"/>
+                </StackPanel>
+
+                <Border Grid.Row="1"
+                        Margin="0,16,0,0"
+                        Padding="18,16"
+                        CornerRadius="12"
+                        BorderThickness="1"
+                        BorderBrush="#D8E2EE"
+                        Background="#F8FBFE">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="当前电台"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource CustomFgSecondary}"/>
+                            <TextBlock x:Name="CurrentRadioNameTextBlock"
+                                       Margin="0,8,0,0"
+                                       Text="未选择"
+                                       FontSize="24"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource CustomFg}"/>
+                            <TextBlock x:Name="PlaybackStatusTextBlock"
+                                       Margin="0,8,0,0"
+                                       FontSize="13"
+                                       Foreground="#64748B"
+                                       Text="双击左侧列表项开始播放"/>
+                        </StackPanel>
+
+                        <ui:Button x:Name="PlaybackToggleButton"
+                                   Grid.Column="1"
+                                   Width="96"
+                                   Height="38"
+                                   Margin="16,0,0,0"
+                                   VerticalAlignment="Center"
+                                   Content="继续播放"
+                                   Appearance="Secondary"
+                                   Click="OnTogglePlayback"
+                                   IsEnabled="False"/>
+                    </Grid>
+                </Border>
+
+                <StackPanel Grid.Row="2" Margin="0,16,0,0">
+                    <TextBlock Text="音量"
+                               FontSize="12"
+                               Foreground="{DynamicResource CustomFgSecondary}"/>
+                    <Slider x:Name="VolumeSlider"
+                            Margin="0,8,0,0"
+                            Minimum="0"
+                            Maximum="100"
+                            Value="62"
+                            ValueChanged="OnVolumeChanged"/>
+                </StackPanel>
+
+                <Border Grid.Row="3"
+                        Margin="0,18,0,0"
+                        Padding="16"
+                        CornerRadius="12"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource CustomSubtleBorder}"
+                        Background="{DynamicResource CustomCardBg}">
+                    <StackPanel>
+                        <TextBlock Text="源地址"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource CustomFgSecondary}"/>
+                        <TextBox x:Name="CurrentRadioUrlTextBox"
+                                 Margin="0,10,0,0"
+                                 MinHeight="120"
+                                 Text="等待选择电台"
+                                 TextWrapping="Wrap"
+                                 IsReadOnly="True"
+                                 VerticalScrollBarVisibility="Auto"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 Foreground="#64748B"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

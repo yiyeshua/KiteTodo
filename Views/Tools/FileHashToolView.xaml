@@ -1,0 +1,224 @@
+<UserControl x:Class="KiteTodo.Views.Tools.FileHashToolView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             Language="zh-CN">
+
+    <UserControl.Resources>
+        <Style x:Key="PanelCardStyle" TargetType="Border">
+            <Setter Property="Padding" Value="18,16"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CustomSubtleBorder}"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource CustomFg}"/>
+        </Style>
+
+        <Style x:Key="SectionHintStyle" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,4,0,0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource CustomFgSecondary}"/>
+            <Setter Property="Opacity" Value="0.72"/>
+        </Style>
+
+        <Style x:Key="HashValueTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Margin" Value="0,6,0,0"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontFamily" Value="Cascadia Code,Consolas,Microsoft YaHei UI"/>
+            <Setter Property="Background" Value="#FFF9FBFD"/>
+            <Setter Property="BorderBrush" Value="#D7E0EA"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <Style x:Key="HashRowCardStyle" TargetType="Border">
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Background" Value="{DynamicResource CustomSubtleBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CustomSubtleBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+        <Grid Margin="18,16,18,18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Style="{StaticResource PanelCardStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <TextBlock Text="文件摘要校验"
+                                   Style="{StaticResource SectionTitleStyle}"/>
+                        <TextBlock Text="选择任意文件后，计算常见摘要值，适合校验文件完整性或比对发布包。"
+                                   Style="{StaticResource SectionHintStyle}"/>
+                    </StackPanel>
+
+                    <WrapPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Top">
+                        <ui:Button Content="选择文件"
+                                   Appearance="Primary"
+                                   Padding="14,6"
+                                   Margin="0,0,8,8"
+                                   Click="OnPickFile"/>
+                        <ui:Button Content="重新计算"
+                                   Appearance="Secondary"
+                                   Padding="14,6"
+                                   Margin="0,0,8,8"
+                                   Click="OnRecalculate"/>
+                        <ui:Button Content="复制全部"
+                                   Appearance="Secondary"
+                                   Padding="14,6"
+                                   Margin="0,0,12,8"
+                                   Click="OnCopyAll"/>
+                        <CheckBox x:Name="LowercaseOutputCheckBox"
+                                  Content="小写输出"
+                                  VerticalAlignment="Center"
+                                  Margin="0,2,0,8"
+                                  Checked="OnOutputCaseChanged"
+                                  Unchecked="OnOutputCaseChanged"/>
+                    </WrapPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="1"
+                    x:Name="FileDropZoneBorder"
+                    Margin="0,14,0,0"
+                    Style="{StaticResource PanelCardStyle}"
+                    Background="{DynamicResource CustomSubtleBg}"
+                    AllowDrop="True"
+                    DragEnter="OnFileDragEnter"
+                    DragOver="OnFileDragOver"
+                    DragLeave="OnFileDragLeave"
+                    Drop="OnFileDrop">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="当前文件"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource CustomFg}"/>
+
+                    <TextBlock x:Name="SelectedFilePathTextBlock"
+                               Grid.Row="1"
+                               Margin="0,8,0,0"
+                               Text="尚未选择文件"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource CustomFgSecondary}"/>
+
+                    <WrapPanel Grid.Row="2" Margin="0,12,0,0">
+                        <Border Padding="10,5" Margin="0,0,8,8" CornerRadius="10" Background="#EEF4FB">
+                            <TextBlock x:Name="FileNameTextBlock" Text="文件名：-" FontSize="11.5" Foreground="#52667A"/>
+                        </Border>
+                        <Border Padding="10,5" Margin="0,0,8,8" CornerRadius="10" Background="#EEF4FB">
+                            <TextBlock x:Name="FileSizeTextBlock" Text="大小：-" FontSize="11.5" Foreground="#52667A"/>
+                        </Border>
+                        <Border Padding="10,5" Margin="0,0,8,8" CornerRadius="10" Background="#EEF4FB">
+                            <TextBlock x:Name="StatusTextBlock" Text="状态：等待选择文件" FontSize="11.5" Foreground="#52667A"/>
+                        </Border>
+                    </WrapPanel>
+
+                    <Border Grid.Row="3"
+                            Margin="0,10,0,0"
+                            Padding="14,12"
+                            CornerRadius="12"
+                            BorderThickness="1"
+                            BorderBrush="#D7E0EA"
+                            Background="#FFF9FBFD">
+                        <TextBlock Text="也可以直接把文件拖到这里，松手后立即开始计算。"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource CustomFgSecondary}"/>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <StackPanel Grid.Row="2" Margin="0,14,0,0">
+                <Border Style="{StaticResource HashRowCardStyle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="MD5" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Top" Foreground="{DynamicResource CustomFg}"/>
+                        <TextBox x:Name="Md5TextBox" Grid.Column="1" Style="{StaticResource HashValueTextBoxStyle}"/>
+                        <ui:Button Grid.Column="2" Content="复制" Appearance="Secondary" Padding="12,6" Margin="12,6,0,0" VerticalAlignment="Top" Tag="MD5" Click="OnCopySingleHash"/>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource HashRowCardStyle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="SHA1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Top" Foreground="{DynamicResource CustomFg}"/>
+                        <TextBox x:Name="Sha1TextBox" Grid.Column="1" Style="{StaticResource HashValueTextBoxStyle}"/>
+                        <ui:Button Grid.Column="2" Content="复制" Appearance="Secondary" Padding="12,6" Margin="12,6,0,0" VerticalAlignment="Top" Tag="SHA1" Click="OnCopySingleHash"/>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource HashRowCardStyle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="SHA256" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Top" Foreground="{DynamicResource CustomFg}"/>
+                        <TextBox x:Name="Sha256TextBox" Grid.Column="1" Style="{StaticResource HashValueTextBoxStyle}"/>
+                        <ui:Button Grid.Column="2" Content="复制" Appearance="Secondary" Padding="12,6" Margin="12,6,0,0" VerticalAlignment="Top" Tag="SHA256" Click="OnCopySingleHash"/>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource HashRowCardStyle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="SHA384" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Top" Foreground="{DynamicResource CustomFg}"/>
+                        <TextBox x:Name="Sha384TextBox" Grid.Column="1" Style="{StaticResource HashValueTextBoxStyle}"/>
+                        <ui:Button Grid.Column="2" Content="复制" Appearance="Secondary" Padding="12,6" Margin="12,6,0,0" VerticalAlignment="Top" Tag="SHA384" Click="OnCopySingleHash"/>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource HashRowCardStyle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="SHA512" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Top" Foreground="{DynamicResource CustomFg}"/>
+                        <TextBox x:Name="Sha512TextBox" Grid.Column="1" Style="{StaticResource HashValueTextBoxStyle}"/>
+                        <ui:Button Grid.Column="2" Content="复制" Appearance="Secondary" Padding="12,6" Margin="12,6,0,0" VerticalAlignment="Top" Tag="SHA512" Click="OnCopySingleHash"/>
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

@@ -1,6 +1,6 @@
 # KiteTodo - 风筝待办
 
-一款基于 C# + WPF (.NET 8) 开发的轻量级 Windows 桌面待办事项管理工具。
+一款基于 C# + WPF (.NET 8) 开发的 Windows 桌面效率工具，集成待办、记事本、专注计时、工具集合与网络电台。
 
 ---
 
@@ -47,9 +47,10 @@
 | **月度总览** | 日历网格展示整月待办概览，实时显示每日完成率，点击某天查看详情 |
 | **专注计时** | 番茄钟功能（25分钟专注 + 5分钟休息），支持暂停/继续/取消，自动记录完成情况 |
 | **数据导出** | 将待办数据导出为 Markdown 或纯文本格式，支持自定义日期范围 |
-| **记事本** | 笔记增删改查，支持将笔记快速转化为待办事项 |
+| **记事本** | 笔记增删改查，支持转待办/事项池；手动保存时保持光标与滚动位置，离开页面或退出程序前会提示保存 |
+| **工具集合** | 内置位值计算器、二维码助手、网络电台，采用统一工作台入口和工具宿主区域 |
 | **设置** | 主题切换（浅色/深色）、番茄钟时长配置、开机自启动 |
-| **系统托盘** | 关闭窗口后最小化到托盘，左键显示主窗口，右键菜单可显示或退出 |
+| **系统托盘** | 关闭窗口后最小化到托盘，左键显示主窗口，右键菜单支持显示主窗口、随机电台、下一随机台、显示/隐藏浮标、退出 |
 | **到期提醒** | 后台每 30 秒检查一次待办提醒时间，到期时弹出 Windows Toast 通知 |
 
 ---
@@ -62,9 +63,15 @@
 | WPF | (内含于 .NET 8) | Windows 桌面 UI 框架 |
 | WPF-UI | 3.0.5 | Fluent Design 风格控件库（现代化 UI） |
 | CommunityToolkit.Mvvm | 8.3.2 | MVVM 框架，提供属性变更通知和命令绑定 |
+| LibVLCSharp | 3.9.4 | 网络电台播放控制 |
 | LiteDB | 5.0.21 | 嵌入式 NoSQL 本地数据库 |
+| Markdig | 0.41.3 | Markdown 渲染 |
+| Microsoft.Web.WebView2 | 1.0.2903.40 | 富文本/网页内容承载 |
 | H.NotifyIcon | 2.4.1 | 系统托盘图标和菜单 |
 | Microsoft.Toolkit.Uwp.Notifications | 7.1.3 | Windows Toast 通知 |
+| QRCoder | 1.6.0 | 二维码生成 |
+| VideoLAN.LibVLC.Windows | 3.0.21 | LibVLC Windows 原生运行时 |
+| ZXing.Net | 0.16.10 | 二维码识别 |
 
 ---
 
@@ -112,6 +119,7 @@ publish.bat
 2. 清理旧的编译产物
 3. 发布为自包含单文件（含压缩，约 77MB）
 4. 将产物复制到项目根目录为 `KiteTodo-Release.exe`
+5. 如果检测到 Inno Setup，则额外生成安装包到 `installer-output/`
 
 ---
 
@@ -122,6 +130,8 @@ KiteTodo/
 ├── KiteTodo.csproj          # 项目配置文件（依赖包、编译选项）
 ├── app.ico                  # 应用程序图标
 ├── publish.bat              # 一键打包脚本
+├── installer/               # Inno Setup 安装脚本
+├── installer-output/        # 安装包输出目录
 │
 ├── App.xaml                 # 应用级资源定义（主题、全局样式）
 ├── App.xaml.cs              # 应用启动逻辑（托盘、主题切换、窗口管理）
@@ -156,7 +166,13 @@ KiteTodo/
 │   ├── PomodoroPage.xaml/.cs#   番茄钟页面
 │   ├── ExportPage.xaml/.cs  #   数据导出页面
 │   ├── SettingsPage.xaml/.cs#   设置页面
-│   └── NotebookPage.xaml/.cs#   记事本页面
+│   ├── NotebookPage.xaml/.cs#   记事本页面
+│   └── ToolCollectionPage.xaml/.cs # 工具集合工作台
+│
+├── Views/Tools/             # 独立工具视图
+│   ├── BitValueCalculatorView.xaml/.cs # 位值计算器
+│   ├── QrToolView.xaml/.cs  # 二维码助手
+│   └── NoiseAndRadioToolView.xaml/.cs # 网络电台
 │
 └── Converters/              # 值转换器（XAML 绑定时的数据格式转换）
     └── BoolConverters.cs    #   多个 bool 相关的转换器
@@ -366,7 +382,7 @@ private void Save()
 | `PomodoroViewModel.cs` | 专注计时 | 计时状态机（空闲→专注→休息）、暂停/继续/取消、记录统计 |
 | `ExportViewModel.cs` | 数据导出 | 生成预览、保存到文件 |
 | `SettingsViewModel.cs` | 设置 | 加载/保存设置、主题即时切换、注册表管理 |
-| `NotebookViewModel.cs` | 记事本 | 管理笔记列表、保存/剧除/转待办 |
+| `NotebookViewModel.cs` | 记事本 | 管理笔记列表、保存/删除/转待办/转事项池 |
 
 ### Views -- 界面层
 
@@ -379,7 +395,8 @@ private void Save()
 | `PomodoroPage` | 圆形计时器显示 + 4 个动态显示/隐藏的操作按断 |
 | `ExportPage` | 格式选择 + 预览区 + 导出③按童 |
 | `SettingsPage` | 各设置项通过双向绑定到 ViewModel 属性 |
-| `NotebookPage` | 左侧笔记列表 + 右侧编辑区。支持拖拖分隔符改变宽度 |
+| `NotebookPage` | 左侧笔记列表 + 右侧编辑区。支持拖动分隔符改变宽度，离开页面或退出程序前对未保存内容进行确认 |
+| `ToolCollectionPage` | 工具工作台入口，按需装载位值计算器、二维码助手和网络电台 |
 
 ### Converters -- 值转换器
 
@@ -423,7 +440,7 @@ private void Save()
 **行为**：
 - 关闭主窗口 → 隐藏到系统托盘（不退出应用）
 - 左键点击托盘图标 → 显示主窗口
-- 右键点击托盘图标 → 弹出菜单（"显示主窗口" / "退出"）
+- 右键点击托盘图标 → 弹出菜单（"显示主窗口" / "随机电台" / "下一随机台" / "显示/隐藏浮标" / "退出"）
 
 **技术细节**：
 - 使用 `Dispatcher.BeginInvoke()` 而非 `Dispatcher.Invoke()` 来处理托盘事件回调
@@ -440,6 +457,8 @@ private void Save()
 # 双击 publish.bat 或命令行运行
 publish.bat
 ```
+
+脚本会优先生成单文件发布产物 `KiteTodo-Release.exe`。若系统已安装 Inno Setup，还会继续编译安装包到 `installer-output/`。
 
 ### 手动打包
 
@@ -464,6 +483,10 @@ dotnet publish KiteTodo.csproj -c Release -r win-x64 --self-contained true ^
 | `DebugType=none` | 不生成调试符号文件（.pdb） |
 
 **注意**：WPF 项目不支持 `PublishTrimmed=true`（IL 裁剪），会报错 NETSDK1168。
+
+**补充说明**：
+- 网络电台使用 LibVLC 播放，发布时会把 Windows x64 原生运行时打包进资源，并在首次运行时自动解压到 `%LOCALAPPDATA%\KiteTodo\RuntimeCache\libvlc\...`
+- 如果本机安装了 Inno Setup 6，`publish.bat` 会自动调用 `installer/KiteTodo.iss` 生成安装程序
 
 ---
 
@@ -640,6 +663,20 @@ public partial class StatisticsPage : Page
 
 Windows Toast 通知库，用于发送系统级通知（待办到期提醒）。
 
+### LibVLCSharp (3.9.4) + VideoLAN.LibVLC.Windows (3.0.21)
+
+网络电台播放组件，提供：
+- 流媒体音频播放
+- 随机电台与下一随机台切换
+- 发布时所需的 VLC 原生运行时
+
+### QRCoder (1.6.0) + ZXing.Net (0.16.10)
+
+二维码工具组件，提供：
+- 文本二维码生成
+- 中心 Logo 叠加导出
+- 从图片解析二维码内容
+
 ---
 
 ## 常见问题
@@ -650,7 +687,15 @@ A: 数据存储在 `%LOCALAPPDATA%\KiteTodo\kitetodo.db`。换电脑时，复制
 
 **Q: 程序关闭后数据会丢失吗？**
 
-A: 不会。所有数据实时保存到 LiteDB 数据库文件中，关闭程序不影响数据。
+A: 不会。待办、设置等数据会正常持久化到 LiteDB；记事本如果存在未保存编辑，离开记事本页面或通过托盘退出程序前会弹出保存确认。
+
+**Q: 发布后网络电台为什么也能直接播放？**
+
+A: 发布包内已经包含 LibVLC 运行时资源。程序首次使用网络电台时会自动解压到本地缓存目录，然后直接调用本地运行时播放流媒体。
+
+**Q: `publish.bat` 除了生成 exe，还会生成什么？**
+
+A: 如果机器上能找到 Inno Setup 6 编译器，脚本会继续生成安装包，输出到 `installer-output/`；如果找不到，就只保留单文件发布结果和安装脚本。
 
 **Q: 为什么打包后的 exe 有 77MB 这么大？**
 

@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Navigation;
 using System.Windows.Threading;
 using System.ComponentModel;
 using KiteTodo.Helpers;
@@ -22,6 +23,7 @@ namespace KiteTodo.Views.Pages;
 /// </summary>
 public partial class NotebookPage : Page
 {
+    private static NotebookPage? _activeInstance;
     private readonly NotebookViewModel _vm = new();
     private const double MinEditorFontSize = 12;
     private const double MaxEditorFontSize = 24;
@@ -32,6 +34,16 @@ public partial class NotebookPage : Page
     private bool _lineNumberRefreshPending = true;
     private int _lastRenderedLineCount = -1;
     private bool _isLoadingEditorText;
+    private bool _suppressNextEditorReload;
+    private int? _currentEditorNoteId;
+    private string _savedTitleSnapshot = string.Empty;
+    private string _savedContentSnapshot = string.Empty;
+    private bool _allowNavigationAfterConfirmation;
+
+    public static bool ConfirmPendingChangesForActivePage()
+    {
+        return _activeInstance?.TryConfirmPendingChanges("退出程序前检测到记事本有未保存内容，是否保存？") ?? true;
+    }
 
     public NotebookPage()
     {
@@ -40,16 +52,33 @@ public partial class NotebookPage : Page
         _vm.PropertyChanged += OnViewModelPropertyChanged;
         Loaded += (_, _) =>
         {
+            _activeInstance = this;
+            _allowNavigationAfterConfirmation = false;
+            if (NavigationService != null)
+            {
+                NavigationService.Navigating -= OnNavigationServiceNavigating;
+                NavigationService.Navigating += OnNavigationServiceNavigating;
+            }
+
             ApplySearchNavigationRequest();
             LoadEditorFromViewModel();
+        };
+        Unloaded += (_, _) =>
+        {
+            if (NavigationService != null)
+                NavigationService.Navigating -= OnNavigationServiceNavigating;
+
+            _allowNavigationAfterConfirmation = false;
+
+            if (ReferenceEquals(_activeInstance, this))
+                _activeInstance = null;
         };
     }
 
     /// <summary>点击保存按钮时保存当前笔记</summary>
     private void OnSaveNote(object sender, System.Windows.RoutedEventArgs e)
     {
-        _vm.EditContent = NoteEditor.Text ?? string.Empty;
-        _vm.SaveCurrentNoteCommand.Execute(null);
+        SaveCurrentNotePreservingEditor();
     }
 
     /// <summary>右键菜单 → 删除笔记</summary>
@@ -96,7 +125,16 @@ public partial class NotebookPage : Page
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(NotebookViewModel.SelectedNote))
+        {
+            if (_suppressNextEditorReload)
+            {
+                _suppressNextEditorReload = false;
+                QueueEditorVisualRefresh(true);
+                return;
+            }
+
             LoadEditorFromViewModel();
+        }
     }
 
     private void LoadEditorFromViewModel()
@@ -107,7 +145,15 @@ public partial class NotebookPage : Page
         _isLoadingEditorText = true;
         try
         {
-            NoteEditor.Text = _vm.EditContent ?? string.Empty;
+            _currentEditorNoteId = _vm.SelectedNote?.Id;
+            var editorContent = _vm.EditContent ?? string.Empty;
+            var titleContent = _vm.EditTitle ?? string.Empty;
+
+            _savedTitleSnapshot = titleContent;
+            _savedContentSnapshot = editorContent;
+
+            NoteEditor.Text = editorContent;
+            NoteTitleEditor.Text = titleContent;
             NoteEditor.CaretIndex = 0;
         }
         finally
@@ -177,6 +223,10 @@ public partial class NotebookPage : Page
         QueueEditorVisualRefresh(currentLineCount != _lastRenderedLineCount);
     }
 
+    private void OnNoteTitleTextChanged(object sender, TextChangedEventArgs e)
+    {
+    }
+
     private void OnNoteEditorSelectionChanged(object sender, RoutedEventArgs e)
     {
         QueueEditorVisualRefresh(false);
@@ -242,6 +292,98 @@ public partial class NotebookPage : Page
             }
 
             UpdateCurrentLineHighlight();
+        }, DispatcherPriority.Background);
+    }
+
+    private void OnNavigationServiceNavigating(object? sender, NavigatingCancelEventArgs e)
+    {
+        if (_allowNavigationAfterConfirmation)
+            return;
+
+        if (!TryConfirmPendingChanges("离开记事本页面前检测到有未保存内容，是否保存？"))
+            e.Cancel = true;
+    }
+
+    private bool TryConfirmPendingChanges(string message)
+    {
+        if (!HasUnsavedChanges())
+            return true;
+
+        var result = MessageBox.Show(
+            message,
+            "记事本",
+            MessageBoxButton.YesNoCancel,
+            MessageBoxImage.Question);
+
+        if (result == MessageBoxResult.Cancel)
+            return false;
+
+        if (result == MessageBoxResult.Yes)
+        {
+            SaveCurrentNotePreservingEditor();
+            if (HasUnsavedChanges())
+                return false;
+        }
+
+        _allowNavigationAfterConfirmation = true;
+
+        return true;
+    }
+
+    private bool HasUnsavedChanges()
+    {
+        if (!_currentEditorNoteId.HasValue)
+            return false;
+
+        var editorText = NoteEditor.Text ?? string.Empty;
+        var titleText = NoteTitleEditor.Text ?? string.Empty;
+
+        return !string.Equals(_savedTitleSnapshot, titleText, StringComparison.Ordinal)
+            || !string.Equals(_savedContentSnapshot, editorText, StringComparison.Ordinal);
+    }
+
+    private void SaveCurrentNotePreservingEditor()
+    {
+        if (!_currentEditorNoteId.HasValue)
+            return;
+
+        var editorText = NoteEditor.Text ?? string.Empty;
+        var titleText = NoteTitleEditor.Text ?? string.Empty;
+
+        if (!HasUnsavedChanges())
+            return;
+
+        var caretIndex = NoteEditor.CaretIndex;
+        var selectionLength = NoteEditor.SelectionLength;
+        var verticalOffset = _editorScrollViewer?.VerticalOffset ?? 0;
+        var horizontalOffset = _editorScrollViewer?.HorizontalOffset ?? 0;
+        var shouldRefocusEditor = NoteEditor.IsKeyboardFocusWithin;
+
+        _suppressNextEditorReload = true;
+        _vm.EditTitle = titleText;
+        _vm.EditContent = editorText;
+
+        if (!_vm.SaveNoteSnapshot(_currentEditorNoteId.Value, titleText, editorText))
+            return;
+
+        _savedTitleSnapshot = titleText;
+        _savedContentSnapshot = editorText;
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            var editor = NoteEditor;
+            if (editor is null)
+                return;
+
+            if (shouldRefocusEditor)
+                editor.Focus();
+
+            var editorText = editor.Text ?? string.Empty;
+            editor.CaretIndex = Math.Min(caretIndex, editorText.Length);
+            editor.SelectionLength = Math.Min(selectionLength, Math.Max(0, editorText.Length - editor.CaretIndex));
+            _editorScrollViewer?.ScrollToVerticalOffset(verticalOffset);
+            _editorScrollViewer?.ScrollToHorizontalOffset(horizontalOffset);
+            QueueEditorVisualRefresh(false);
         }, DispatcherPriority.Background);
     }
 

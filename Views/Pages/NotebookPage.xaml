@@ -131,12 +131,14 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <ui:TextBox Grid.Column="0"
+                    <ui:TextBox x:Name="NoteTitleEditor"
+                                Grid.Column="0"
                                 Text="{Binding EditTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                 PlaceholderText="笔记标题" FontSize="18" FontWeight="SemiBold"
                                 Background="Transparent" BorderThickness="0"
                                 Foreground="{DynamicResource CustomFg}"
-                                Margin="0,0,12,0"/>
+                                Margin="0,0,12,0"
+                                TextChanged="OnNoteTitleTextChanged"/>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <ui:Button Content="A-" Appearance="Secondary" Padding="10,4" Margin="0,0,6,0" Click="OnDecreaseFontSize"/>

@@ -82,16 +82,28 @@ public partial class NotebookViewModel : ObservableObject
     private void SaveCurrentNote()
     {
         if (SelectedNote == null || _isSaving) return;
+        SaveNoteSnapshot(SelectedNote.Id, EditTitle, EditContent);
+    }
+
+    public bool SaveNoteSnapshot(int noteId, string title, string content)
+    {
+        if (_isSaving)
+            return false;
+
+        var target = _noteService.GetById(noteId);
+        if (target == null)
+            return false;
+
         _isSaving = true;
         try
         {
-            var selectedId = SelectedNote.Id;
-            SelectedNote.Title = EditTitle;
-            SelectedNote.Content = EditContent;
-            SelectedNote.RichContent = null;
-            _noteService.Update(SelectedNote);
-            LoadNotes(selectedId);
-            SelectedNote = Notes.FirstOrDefault(n => n.Id == selectedId);
+            target.Title = title;
+            target.Content = content;
+            target.RichContent = null;
+            _noteService.Update(target);
+            LoadNotes(noteId);
+            SelectedNote = Notes.FirstOrDefault(n => n.Id == noteId);
+            return true;
         }
         finally
         {

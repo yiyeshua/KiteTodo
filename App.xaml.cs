@@ -19,7 +19,9 @@ using H.NotifyIcon.Core;
 using KiteTodo.Models;
 using KiteTodo.Services;
 using KiteTodo.ViewModels;
+using KiteTodo.Views.Pages;
 using KiteTodo.Views;
+using KiteTodo.Views.Tools;
 using Wpf.Ui.Appearance;
 
 namespace KiteTodo;
@@ -85,6 +87,10 @@ public partial class App : Application
             {
                 new PopupMenuItem("显示主窗口", (_, _) =>
                     Dispatcher.BeginInvoke(ShowMainWindow)),
+                new PopupMenuItem("随机电台", (_, _) =>
+                    Dispatcher.BeginInvoke(new Action(() => _ = PlayRandomRadioFromTrayAsync()))),
+                new PopupMenuItem("下一随机台", (_, _) =>
+                    Dispatcher.BeginInvoke(new Action(() => _ = PlayNextRandomRadioFromTrayAsync()))),
                 new PopupMenuItem("显示/隐藏浮标", (_, _) =>
                     Dispatcher.BeginInvoke(ToggleFloatingEntry)),
                 new PopupMenuSeparator(),
@@ -102,6 +108,32 @@ public partial class App : Application
         };
 
         _trayIcon.Create();
+    }
+
+    private async Task PlayRandomRadioFromTrayAsync()
+    {
+        try
+        {
+            var radioView = NoiseAndRadioToolView.GetSharedInstance();
+            await radioView.PlayRandomRadioAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"随机电台启动失败：{ex.Message}", "网络电台", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private async Task PlayNextRandomRadioFromTrayAsync()
+    {
+        try
+        {
+            var radioView = NoiseAndRadioToolView.GetSharedInstance();
+            await radioView.PlayNextRandomRadioAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"下一随机台启动失败：{ex.Message}", "网络电台", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private Icon CreateDefaultIcon()
@@ -348,6 +380,9 @@ public partial class App : Application
 
     private void ExitApp()
     {
+        if (!NotebookPage.ConfirmPendingChangesForActivePage())
+            return;
+
         ReminderService.Instance.Stop();
         _trayIcon?.Dispose();
         _trayIcon = null;

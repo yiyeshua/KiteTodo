@@ -1,0 +1,447 @@
+<UserControl x:Class="KiteTodo.Views.Tools.NavigationDirectoryToolView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             Language="zh-CN">
+
+    <UserControl.Resources>
+        <Style x:Key="PanelCardStyle" TargetType="Border">
+            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource CustomSubtleBorder}"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource CustomFg}"/>
+        </Style>
+
+        <Style x:Key="SectionHintStyle" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,4,0,0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource CustomFgSecondary}"/>
+            <Setter Property="Opacity" Value="0.72"/>
+        </Style>
+
+        <DropShadowEffect x:Key="SiteCardShadow"
+                          BlurRadius="18"
+                          ShadowDepth="4"
+                          Color="#1F2937"
+                          Opacity="0.08"/>
+
+        <DropShadowEffect x:Key="SiteCardHoverShadow"
+                          BlurRadius="28"
+                          ShadowDepth="10"
+                          Color="#2563EB"
+                          Opacity="0.18"/>
+    </UserControl.Resources>
+
+    <Grid Margin="20,12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="16"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0"
+                Style="{StaticResource PanelCardStyle}"
+                Background="{DynamicResource CustomSubtleBg}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0">
+                    <TextBlock Text="分类"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource CustomFg}"/>
+                    <TextBlock Text="按主题浏览导航入口"
+                               Margin="0,4,0,0"
+                               FontSize="12"
+                               Foreground="{DynamicResource CustomFgSecondary}"/>
+                </StackPanel>
+
+                <ListBox x:Name="CategoryListBox"
+                         Grid.Row="1"
+                         Margin="0,12,0,0"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         SelectionChanged="OnCategorySelectionChanged">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Padding" Value="2"/>
+                            <Setter Property="Margin" Value="0,0,0,4"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border x:Name="CategoryBorder"
+                                    Padding="10,8"
+                                    CornerRadius="10"
+                                    Background="{DynamicResource CustomCardBg}"
+                                    BorderBrush="{DynamicResource CustomSubtleBorder}"
+                                    BorderThickness="1">
+                                <Border.ContextMenu>
+                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                        <MenuItem Header="删除分类"
+                                                  CommandParameter="{Binding}"
+                                                  Click="OnDeleteCategory">
+                                            <MenuItem.Style>
+                                                <Style TargetType="MenuItem">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding CanDelete}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </MenuItem.Style>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </Border.ContextMenu>
+                                <TextBlock Text="{Binding DisplayText}"
+                                           Width="180"
+                                           VerticalAlignment="Center"
+                                           FontSize="12.5"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource CustomFg}"/>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                    <Setter TargetName="CategoryBorder" Property="Background" Value="#EAF4FF"/>
+                                    <Setter TargetName="CategoryBorder" Property="BorderBrush" Value="#4DA3FF"/>
+                                    <Setter TargetName="CategoryBorder" Property="BorderThickness" Value="2"/>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+
+        <Border Grid.Column="2"
+                Style="{StaticResource PanelCardStyle}"
+                Background="{DynamicResource CustomSubtleBg}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0">
+                    <DockPanel LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Left">
+                            <TextBlock Text="导航入口"
+                                       Style="{StaticResource SectionTitleStyle}"/>
+                            <TextBlock Text="更紧凑的入口块样式，统一使用外部浏览器打开。"
+                                       Style="{StaticResource SectionHintStyle}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <TextBlock x:Name="ResultSummaryTextBlock"
+                                   DockPanel.Dock="Right"
+                                   VerticalAlignment="Center"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource CustomFgSecondary}"/>
+                    </DockPanel>
+
+                    <WrapPanel Margin="0,12,0,0">
+                        <ui:TextBox x:Name="SearchTextBox"
+                                    Width="250"
+                                    Margin="0,0,8,8"
+                                    TextChanged="OnSearchTextChanged"
+                                    VerticalContentAlignment="Center"
+                                    FontSize="13"
+                                    Padding="10,6"
+                                    BorderBrush="{DynamicResource CustomSubtleBorder}"
+                                    PlaceholderText="搜索名称、描述、网址或标签..."/>
+                        <ui:Button Content="新增站点"
+                                   Appearance="Primary"
+                                   Padding="12,6"
+                                   Margin="0,0,8,8"
+                                   Click="OnToggleAddSiteForm"/>
+                    </WrapPanel>
+
+                    <Border x:Name="AddSiteFormBorder"
+                            Visibility="Collapsed"
+                            Margin="0,2,0,0"
+                            Padding="12,12"
+                            CornerRadius="12"
+                            Background="White"
+                            BorderBrush="{DynamicResource CustomSubtleBorder}"
+                            BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock x:Name="AddSiteFormTitleTextBlock"
+                                       Text="新增自定义站点"
+                                       FontSize="13.5"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource CustomFg}"/>
+                            <ui:TextBox x:Name="AddSiteNameTextBox" Margin="0,10,0,8" PlaceholderText="站点名称"/>
+                            <ui:TextBox x:Name="AddSiteUrlTextBox" Margin="0,0,0,8" PlaceholderText="https://example.com"/>
+                            <ui:TextBox x:Name="AddSiteCategoryTextBox" Margin="0,0,0,8" PlaceholderText="分类，例如：综合工具"/>
+                            <ui:TextBox x:Name="AddSiteTagsTextBox" Margin="0,0,0,8" PlaceholderText="标签，使用空格或中文逗号分隔"/>
+                            <ui:TextBox x:Name="AddSiteDescriptionTextBox" Margin="0,0,0,10" PlaceholderText="站点简介" AcceptsReturn="True" TextWrapping="Wrap" Height="64"/>
+                            <WrapPanel>
+                                <ui:Button Content="保存" Appearance="Primary" Padding="12,6" Margin="0,0,8,0" Click="OnSaveCustomSite"/>
+                                <ui:Button Content="取消" Appearance="Secondary" Padding="12,6" Click="OnCancelAddSite"/>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <Grid Grid.Row="1" Margin="0,14,0,0">
+                    <ListBox x:Name="SiteListBox"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             MouseDoubleClick="OnSiteDoubleClick">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel IsItemsHost="True"/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,0,10,10"/>
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Focusable" Value="False"/>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border x:Name="SiteCardBorder"
+                                    Width="212"
+                                    Height="122"
+                                    Padding="11,11"
+                                        CornerRadius="16"
+                                        Background="White"
+                                        BorderThickness="1"
+                                        BorderBrush="#D7E2F0"
+                                        Effect="{StaticResource SiteCardShadow}"
+                                        RenderTransformOrigin="0.5,0.5">
+                                    <Border.RenderTransform>
+                                        <TranslateTransform x:Name="SiteCardTranslateTransform"/>
+                                    </Border.RenderTransform>
+                                    <Border.ContextMenu>
+                                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                            <MenuItem Header="打开站点"
+                                                      CommandParameter="{Binding}"
+                                                      Click="OnOpenExternal"/>
+                                            <MenuItem Header="编辑站点"
+                                                      CommandParameter="{Binding}"
+                                                      Click="OnEditCustomSite">
+                                                <MenuItem.Style>
+                                                    <Style TargetType="MenuItem">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding CanDelete}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </MenuItem.Style>
+                                            </MenuItem>
+                                            <MenuItem Header="复制链接"
+                                                      CommandParameter="{Binding}"
+                                                      Click="OnCopyUrl"/>
+                                            <Separator/>
+                                            <MenuItem Header="删除站点"
+                                                      CommandParameter="{Binding}"
+                                                      Click="OnDeleteCustomSite">
+                                                <MenuItem.Style>
+                                                    <Style TargetType="MenuItem">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding CanDelete}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </MenuItem.Style>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </Border.ContextMenu>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <DockPanel Grid.Row="0" LastChildFill="False">
+                                            <Border DockPanel.Dock="Left"
+                                                    Width="34"
+                                                    Height="34"
+                                                    Margin="0,0,8,0"
+                                                    VerticalAlignment="Top"
+                                                    CornerRadius="10"
+                                                    Background="{Binding BadgeBackground}">
+                                                <TextBlock Text="{Binding BadgeText}"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="11.5"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{Binding BadgeForeground}"/>
+                                            </Border>
+                                            <StackPanel Width="124">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontSize="12.5"
+                                                           FontWeight="SemiBold"
+                                                           MaxHeight="32"
+                                                           TextWrapping="Wrap"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Foreground="{DynamicResource CustomFg}"/>
+                                                <TextBlock Text="{Binding Url}"
+                                                           Margin="0,3,0,0"
+                                                           FontSize="10"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Foreground="#64748B"/>
+                                            </StackPanel>
+
+                                            <ui:Button DockPanel.Dock="Right"
+                                                       Width="28"
+                                                       Height="28"
+                                                       Padding="0"
+                                                       Appearance="Secondary"
+                                                       Tag="{Binding}"
+                                                       Click="OnToggleFavoriteSite">
+                                                <ui:Button.Style>
+                                                    <Style TargetType="ui:Button">
+                                                        <Setter Property="Content" Value="☆"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource CustomFgSecondary}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                                                <Setter Property="Content" Value="★"/>
+                                                                <Setter Property="Foreground" Value="#D97706"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ui:Button.Style>
+                                            </ui:Button>
+                                        </DockPanel>
+
+                                        <WrapPanel Grid.Row="1" Margin="0,8,0,0">
+                                            <Border Padding="7,2"
+                                                    Margin="0,0,4,4"
+                                                    CornerRadius="9"
+                                                    Background="#EEF4FB">
+                                                <TextBlock Text="{Binding Category}"
+                                                           FontSize="10"
+                                                           Foreground="#52667A"/>
+                                            </Border>
+                                            <Border Margin="0,0,4,4"
+                                                    Padding="7,2"
+                                                    CornerRadius="9"
+                                                    Background="#FFF7D6">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="已收藏"
+                                                           FontSize="10"
+                                                           Foreground="#A16207"/>
+                                            </Border>
+                                            <Border Margin="0,0,4,4"
+                                                    Padding="7,2"
+                                                    CornerRadius="9"
+                                                    Background="#E8F8EE">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsRecent}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <TextBlock Text="最近访问"
+                                                           FontSize="10"
+                                                           Foreground="#15803D"/>
+                                            </Border>
+                                        </WrapPanel>
+
+                                        <TextBlock Grid.Row="2"
+                                                   Margin="0,6,0,0"
+                                                   FontSize="10.5"
+                                                   MaxHeight="34"
+                                                   TextWrapping="Wrap"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{DynamicResource CustomFgSecondary}"
+                                                   Text="{Binding Description}"
+                                                   ToolTip="{Binding TagText}"/>
+
+                                        <DockPanel Grid.Row="3" Margin="0,8,0,0" LastChildFill="False">
+                                            <TextBlock DockPanel.Dock="Left"
+                                                       VerticalAlignment="Center"
+                                                       FontSize="10"
+                                                       Foreground="#2563EB"
+                                                       Text="{Binding TagText}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Width="138"/>
+                                            <ui:Button DockPanel.Dock="Right"
+                                                       Content="打开"
+                                                       Appearance="Primary"
+                                                       Padding="10,4"
+                                                       Tag="{Binding}"
+                                                       Click="OnOpenExternal"/>
+                                        </DockPanel>
+                                    </Grid>
+                                </Border>
+                                <DataTemplate.Triggers>
+                                    <Trigger SourceName="SiteCardBorder" Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="SiteCardBorder" Property="BorderBrush" Value="#60A5FA"/>
+                                        <Setter TargetName="SiteCardBorder" Property="Background" Value="#F8FBFF"/>
+                                        <Setter TargetName="SiteCardBorder" Property="Effect" Value="{StaticResource SiteCardHoverShadow}"/>
+                                    </Trigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Border x:Name="SiteEmptyStateBorder"
+                            Visibility="Collapsed"
+                            Padding="18,14"
+                            CornerRadius="12"
+                            BorderThickness="1"
+                            BorderBrush="#D6E2F1"
+                            Background="#F8FBFE"
+                            IsHitTestVisible="False">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="没有匹配的站点"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource CustomFg}"/>
+                            <TextBlock Text="试试切换分类、缩短搜索词，或者新增一个自定义站点。"
+                                       Margin="0,8,0,0"
+                                       FontSize="12"
+                                       Width="280"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource CustomFgSecondary}"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

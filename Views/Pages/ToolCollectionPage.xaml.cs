@@ -58,19 +58,28 @@ public partial class ToolCollectionPage : Page
         {
             Key = "tool-3",
             Badge = "3",
-            Title = "工具3",
-            Subtitle = "预留入口",
+            Title = "网络电台",
+            Subtitle = "分页电台列表、双击播放暂停与新增源校验",
             AccentBrush = CreateBrush("#F59E0B"),
-            ViewFactory = () => BuildPlaceholderToolView("工具3", "这里预留给工具3，后面按同样方式接入。")
+            ViewFactory = static () => NoiseAndRadioToolView.GetSharedInstance()
         });
         _tools.Add(new ToolEntry
         {
             Key = "tool-4",
             Badge = "4",
-            Title = "工具4",
-            Subtitle = "预留入口",
+            Title = "文件摘要校验",
+            Subtitle = "计算 MD5、SHA1、SHA256、SHA384、SHA512",
             AccentBrush = CreateBrush("#8B5CF6"),
-            ViewFactory = () => BuildPlaceholderToolView("工具4", "这里预留给工具4，后面按同样方式接入。")
+            ViewFactory = static () => new FileHashToolView()
+        });
+        _tools.Add(new ToolEntry
+        {
+            Key = "tool-5",
+            Badge = "5",
+            Title = "导航大全",
+            Subtitle = "分类浏览常用在线工具，并支持内嵌网页预览",
+            AccentBrush = CreateBrush("#EC4899"),
+            ViewFactory = static () => new NavigationDirectoryToolView()
         });
 
         ShowWorkbench();
@@ -114,59 +123,19 @@ public partial class ToolCollectionPage : Page
 
         if (!_toolViewCache.TryGetValue(tool.Key, out var view))
         {
-            view = tool.ViewFactory();
-            _toolViewCache[tool.Key] = view;
+            try
+            {
+                view = tool.ViewFactory();
+                _toolViewCache[tool.Key] = view;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"打开工具失败：{ex.Message}", tool.Title, MessageBoxButton.OK, MessageBoxImage.Warning);
+                ShowWorkbench();
+                return;
+            }
         }
 
         ToolHostContent.Content = view;
-    }
-
-    private static FrameworkElement BuildPlaceholderToolView(string title, string description)
-    {
-        var card = new Border
-        {
-            Margin = new Thickness(18),
-            Padding = new Thickness(24),
-            CornerRadius = new CornerRadius(14),
-            BorderThickness = new Thickness(1),
-            BorderBrush = (Brush)new BrushConverter().ConvertFrom("#D9E1EC")!,
-            Background = Brushes.White
-        };
-
-        var stack = new StackPanel();
-        stack.Children.Add(new TextBlock
-        {
-            Text = title,
-            FontSize = 22,
-            FontWeight = FontWeights.SemiBold,
-            Foreground = (Brush)new BrushConverter().ConvertFrom("#1F2937")!
-        });
-        stack.Children.Add(new TextBlock
-        {
-            Text = description,
-            Margin = new Thickness(0, 10, 0, 0),
-            FontSize = 13,
-            TextWrapping = TextWrapping.Wrap,
-            Foreground = (Brush)new BrushConverter().ConvertFrom("#64748B")!
-        });
-        stack.Children.Add(new Border
-        {
-            Margin = new Thickness(0, 22, 0, 0),
-            Padding = new Thickness(18, 16, 18, 16),
-            CornerRadius = new CornerRadius(12),
-            Background = (Brush)new BrushConverter().ConvertFrom("#F8FAFC")!,
-            BorderBrush = (Brush)new BrushConverter().ConvertFrom("#E2E8F0")!,
-            BorderThickness = new Thickness(1),
-            Child = new TextBlock
-            {
-                Text = "这里已经是独立工具视图区域，不是单纯的 MessageBox 占位。后面工具1、工具2、工具3都可以各自挂自己的页面或控件。",
-                FontSize = 12,
-                TextWrapping = TextWrapping.Wrap,
-                Foreground = (Brush)new BrushConverter().ConvertFrom("#475569")!
-            }
-        });
-
-        card.Child = stack;
-        return card;
     }
 }
