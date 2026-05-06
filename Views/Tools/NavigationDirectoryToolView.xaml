@@ -41,8 +41,8 @@
 
     <Grid Margin="20,12">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="220"/>
-            <ColumnDefinition Width="16"/>
+            <ColumnDefinition Width="152"/>
+            <ColumnDefinition Width="12"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
@@ -60,10 +60,6 @@
                                FontSize="15"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource CustomFg}"/>
-                    <TextBlock Text="按主题浏览导航入口"
-                               Margin="0,4,0,0"
-                               FontSize="12"
-                               Foreground="{DynamicResource CustomFgSecondary}"/>
                 </StackPanel>
 
                 <ListBox x:Name="CategoryListBox"
@@ -107,7 +103,6 @@
                                     </ContextMenu>
                                 </Border.ContextMenu>
                                 <TextBlock Text="{Binding DisplayText}"
-                                           Width="180"
                                            VerticalAlignment="Center"
                                            FontSize="12.5"
                                            FontWeight="SemiBold"
@@ -141,9 +136,6 @@
                         <StackPanel DockPanel.Dock="Left">
                             <TextBlock Text="导航入口"
                                        Style="{StaticResource SectionTitleStyle}"/>
-                            <TextBlock Text="更紧凑的入口块样式，统一使用外部浏览器打开。"
-                                       Style="{StaticResource SectionHintStyle}"
-                                       TextWrapping="Wrap"/>
                         </StackPanel>
                         <TextBlock x:Name="ResultSummaryTextBlock"
                                    DockPanel.Dock="Right"
@@ -205,24 +197,25 @@
                              MouseDoubleClick="OnSiteDoubleClick">
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <WrapPanel IsItemsHost="True"/>
+                                <UniformGrid IsItemsHost="True"
+                                             Columns="2"/>
                             </ItemsPanelTemplate>
                         </ListBox.ItemsPanel>
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
                                 <Setter Property="Padding" Value="0"/>
-                                <Setter Property="Margin" Value="0,0,10,10"/>
+                                <Setter Property="Margin" Value="0,0,12,12"/>
                                 <Setter Property="Background" Value="Transparent"/>
                                 <Setter Property="BorderThickness" Value="0"/>
                                 <Setter Property="Focusable" Value="False"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                             </Style>
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border x:Name="SiteCardBorder"
-                                    Width="212"
-                                    Height="122"
-                                    Padding="11,11"
+                                    MinHeight="122"
+                                    Padding="12,11"
                                         CornerRadius="16"
                                         Background="White"
                                         BorderThickness="1"
@@ -279,8 +272,14 @@
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
 
-                                        <DockPanel Grid.Row="0" LastChildFill="False">
-                                            <Border DockPanel.Dock="Left"
+                                        <Grid Grid.Row="0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <Border Grid.Column="0"
                                                     Width="34"
                                                     Height="34"
                                                     Margin="0,0,8,0"
@@ -294,7 +293,8 @@
                                                            FontWeight="SemiBold"
                                                            Foreground="{Binding BadgeForeground}"/>
                                             </Border>
-                                            <StackPanel Width="124">
+                                            <StackPanel Grid.Column="1"
+                                                        Margin="0,0,8,0">
                                                 <TextBlock Text="{Binding Name}"
                                                            FontSize="12.5"
                                                            FontWeight="SemiBold"
@@ -309,7 +309,7 @@
                                                            Foreground="#64748B"/>
                                             </StackPanel>
 
-                                            <ui:Button DockPanel.Dock="Right"
+                                            <ui:Button Grid.Column="2"
                                                        Width="28"
                                                        Height="28"
                                                        Padding="0"
@@ -329,7 +329,7 @@
                                                     </Style>
                                                 </ui:Button.Style>
                                             </ui:Button>
-                                        </DockPanel>
+                                        </Grid>
 
                                         <WrapPanel Grid.Row="1" Margin="0,8,0,0">
                                             <Border Padding="7,2"
@@ -388,21 +388,26 @@
                                                    Text="{Binding Description}"
                                                    ToolTip="{Binding TagText}"/>
 
-                                        <DockPanel Grid.Row="3" Margin="0,8,0,0" LastChildFill="False">
-                                            <TextBlock DockPanel.Dock="Left"
+                                        <Grid Grid.Row="3" Margin="0,8,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0"
                                                        VerticalAlignment="Center"
                                                        FontSize="10"
+                                                       Margin="0,0,10,0"
                                                        Foreground="#2563EB"
                                                        Text="{Binding TagText}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       Width="138"/>
-                                            <ui:Button DockPanel.Dock="Right"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <ui:Button Grid.Column="1"
                                                        Content="打开"
                                                        Appearance="Primary"
                                                        Padding="10,4"
                                                        Tag="{Binding}"
                                                        Click="OnOpenExternal"/>
-                                        </DockPanel>
+                                        </Grid>
                                     </Grid>
                                 </Border>
                                 <DataTemplate.Triggers>

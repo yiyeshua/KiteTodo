@@ -14,6 +14,12 @@ public class Note
     /// <summary>LiteDB 自增主键</summary>
     public int Id { get; set; }
 
+    /// <summary>父笔记 ID，null 表示顶级笔记</summary>
+    public int? ParentId { get; set; }
+
+    /// <summary>同级排序值，越小越靠前</summary>
+    public int SortOrder { get; set; }
+
     /// <summary>笔记标题</summary>
     public string Title { get; set; } = string.Empty;
 

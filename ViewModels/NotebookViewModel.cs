@@ -16,32 +16,24 @@ namespace KiteTodo.ViewModels;
 public partial class NotebookViewModel : ObservableObject
 {
     private readonly NoteService _noteService = new();
+    private readonly HashSet<int> _collapsedNoteIds = [];
     private bool _isSaving;
-    private const int NotesPageSize = 8;
 
     /// <summary>所有笔记列表（按修改时间倒序）</summary>
     [ObservableProperty]
     private ObservableCollection<Note> _notes = new();
 
-    /// <summary>当前页显示的笔记列表</summary>
+    /// <summary>左侧层级展示列表（扁平化）</summary>
     [ObservableProperty]
-    private ObservableCollection<Note> _pagedNotes = new();
+    private ObservableCollection<NotebookListItem> _visibleNotes = new();
 
-    /// <summary>当前分页索引（从 0 开始）</summary>
+    /// <summary>当前选中的左侧列表项</summary>
     [ObservableProperty]
-    private int _pageIndex;
+    private NotebookListItem? _selectedListItem;
 
-    /// <summary>分页信息文本</summary>
+    /// <summary>左侧摘要</summary>
     [ObservableProperty]
-    private string _pageInfo = "第 1 / 1 页";
-
-    /// <summary>是否可以上一页</summary>
-    [ObservableProperty]
-    private bool _canGoPreviousPage;
-
-    /// <summary>是否可以下一页</summary>
-    [ObservableProperty]
-    private bool _canGoNextPage;
+    private string _noteSummary = "共 0 条";
 
     /// <summary>当前选中的笔记（绑定到右侧编辑区）</summary>
     [ObservableProperty]
@@ -60,13 +52,27 @@ public partial class NotebookViewModel : ObservableObject
         LoadNotes();
     }
 
+    partial void OnSelectedListItemChanged(NotebookListItem? value)
+    {
+        if (value?.Note == null)
+        {
+            SelectedNote = null;
+            return;
+        }
+
+        if (SelectedNote?.Id == value.Note.Id)
+            return;
+
+        SelectedNote = value.Note;
+    }
+
     /// <summary>当选中笔记变化时，自动将数据填充到编辑区</summary>
     partial void OnSelectedNoteChanged(Note? value)
     {
         if (_isSaving) return;
         if (value != null)
         {
-            MovePageToNote(value.Id);
+            SelectedListItem = VisibleNotes.FirstOrDefault(item => item.Note.Id == value.Id);
             EditTitle = value.Title;
             EditContent = value.Content;
         }
@@ -115,11 +121,24 @@ public partial class NotebookViewModel : ObservableObject
     public void LoadNotes(int? preferredSelectedId = null)
     {
         var list = _noteService.GetAll();
-        Notes = new ObservableCollection<Note>(list);
-        RefreshPagedNotes();
+        var targetId = preferredSelectedId ?? SelectedNote?.Id;
+        if (targetId.HasValue)
+            ExpandAncestors(list, targetId.Value);
 
-        if (preferredSelectedId.HasValue)
-            MovePageToNote(preferredSelectedId.Value);
+        Notes = new ObservableCollection<Note>(list);
+        VisibleNotes = new ObservableCollection<NotebookListItem>(BuildVisibleNotes(list));
+        NoteSummary = $"共 {Notes.Count} 条";
+
+        if (targetId.HasValue)
+        {
+            SelectedListItem = VisibleNotes.FirstOrDefault(item => item.Note.Id == targetId.Value);
+            SelectedNote = SelectedListItem?.Note;
+        }
+        else if (VisibleNotes.Count == 0)
+        {
+            SelectedListItem = null;
+            SelectedNote = null;
+        }
     }
 
     /// <summary>新建一个空白笔记</summary>
@@ -137,18 +156,49 @@ public partial class NotebookViewModel : ObservableObject
         SelectedNote = Notes.FirstOrDefault(n => n.Id == note.Id);
     }
 
+    public void CreateChildNote(int parentId)
+    {
+        _collapsedNoteIds.Remove(parentId);
+        var note = _noteService.AddChild(parentId);
+        LoadNotes(note.Id);
+        SelectedNote = Notes.FirstOrDefault(n => n.Id == note.Id);
+    }
+
+    public void ToggleChildren(int noteId)
+    {
+        var list = Notes.ToList();
+        var currentSelectedId = SelectedNote?.Id;
+
+        var isCollapsing = !_collapsedNoteIds.Contains(noteId);
+        if (isCollapsing)
+            _collapsedNoteIds.Add(noteId);
+        else
+            _collapsedNoteIds.Remove(noteId);
+
+        if (isCollapsing && currentSelectedId.HasValue && IsDescendantOf(currentSelectedId.Value, noteId, list))
+        {
+            LoadNotes(noteId);
+            return;
+        }
+
+        LoadNotes(currentSelectedId);
+    }
+
     /// <summary>删除选中的笔记</summary>
-    [RelayCommand]
-    private void DeleteNote(Note note)
+    public void DeleteNote(Note note, bool deleteChildren)
     {
         var currentSelectedId = SelectedNote?.Id;
-        _noteService.Delete(note.Id);
-        LoadNotes(currentSelectedId == note.Id ? null : currentSelectedId);
-        // 如果删除的是当前选中的，清空选中
-        if (SelectedNote?.Id == note.Id)
-            SelectedNote = null;
+        var fallbackSelectedId = currentSelectedId;
 
-        RefreshPagedNotes();
+        if (currentSelectedId == note.Id)
+        {
+            fallbackSelectedId = deleteChildren
+                ? null
+                : _noteService.GetChildren(note.Id).FirstOrDefault()?.Id;
+        }
+
+        _noteService.Delete(note.Id, deleteChildren);
+        LoadNotes(currentSelectedId == note.Id ? fallbackSelectedId : currentSelectedId);
     }
 
     /// <summary>将笔记转化为待办（标题→待办标题，内容→待办描述）</summary>
@@ -170,67 +220,6 @@ public partial class NotebookViewModel : ObservableObject
         MoveNoteToBacklog(note, deleteAfterTransfer: true);
     }
 
-    [RelayCommand(CanExecute = nameof(CanGoPreviousPage))]
-    private void GoPreviousPage()
-    {
-        if (PageIndex <= 0)
-            return;
-
-        PageIndex--;
-        RefreshPagedNotes();
-    }
-
-    [RelayCommand(CanExecute = nameof(CanGoNextPage))]
-    private void GoNextPage()
-    {
-        if (PageIndex >= GetTotalPages() - 1)
-            return;
-
-        PageIndex++;
-        RefreshPagedNotes();
-    }
-
-    private void RefreshPagedNotes()
-    {
-        var totalPages = GetTotalPages();
-        if (PageIndex >= totalPages)
-            PageIndex = Math.Max(0, totalPages - 1);
-
-        var pageItems = Notes
-            .Skip(PageIndex * NotesPageSize)
-            .Take(NotesPageSize)
-            .ToList();
-
-        PagedNotes = new ObservableCollection<Note>(pageItems);
-        PageInfo = $"第 {PageIndex + 1} / {totalPages} 页，共 {Notes.Count} 条";
-        CanGoPreviousPage = PageIndex > 0;
-        CanGoNextPage = PageIndex < totalPages - 1;
-        GoPreviousPageCommand.NotifyCanExecuteChanged();
-        GoNextPageCommand.NotifyCanExecuteChanged();
-    }
-
-    private int GetTotalPages()
-    {
-        return Math.Max(1, (int)Math.Ceiling(Notes.Count / (double)NotesPageSize));
-    }
-
-    private void MovePageToNote(int noteId)
-    {
-        var index = Notes
-            .Select((note, itemIndex) => new { Note = note, Index = itemIndex })
-            .FirstOrDefault(entry => entry.Note.Id == noteId)?.Index;
-
-        if (!index.HasValue)
-            return;
-
-        var targetPage = index.Value / NotesPageSize;
-        if (targetPage == PageIndex && PagedNotes.Any(n => n.Id == noteId))
-            return;
-
-        PageIndex = targetPage;
-        RefreshPagedNotes();
-    }
-
     public void MoveNoteToBacklog(Note note, bool deleteAfterTransfer)
     {
         _noteService.ConvertToBacklog(note.Id);
@@ -249,5 +238,89 @@ public partial class NotebookViewModel : ObservableObject
     {
         LoadNotes(noteId);
         SelectedNote = Notes.FirstOrDefault(n => n.Id == noteId);
+    }
+
+    private List<NotebookListItem> BuildVisibleNotes(List<Note> notes)
+    {
+        var result = new List<NotebookListItem>();
+        var noteIds = notes.Select(note => note.Id).ToHashSet();
+        var childrenLookup = notes
+            .Where(note => note.ParentId.HasValue)
+            .GroupBy(note => note.ParentId)
+            .ToDictionary(
+                group => group.Key!.Value,
+                group => OrderNotes(group).ToList());
+
+        var roots = OrderNotes(notes.Where(note => !note.ParentId.HasValue || !noteIds.Contains(note.ParentId.Value)));
+        foreach (var root in roots)
+            AppendNote(result, root, 0, childrenLookup);
+
+        return result;
+    }
+
+    private static IEnumerable<Note> OrderNotes(IEnumerable<Note> notes)
+    {
+        return notes
+            .OrderBy(note => note.SortOrder)
+            .ThenByDescending(note => note.UpdatedAt)
+            .ThenBy(note => note.Id);
+    }
+
+    private void AppendNote(
+        ICollection<NotebookListItem> result,
+        Note note,
+        int depth,
+        IReadOnlyDictionary<int, List<Note>> childrenLookup)
+    {
+        childrenLookup.TryGetValue(note.Id, out var children);
+        var childList = children ?? [];
+        var isExpanded = !_collapsedNoteIds.Contains(note.Id);
+
+        var siblingCount = 0;
+        var siblingIndex = 0;
+        if (depth > 0 && note.ParentId.HasValue && childrenLookup.TryGetValue(note.ParentId.Value, out var siblings))
+        {
+            siblingCount = siblings.Count;
+            siblingIndex = siblings.FindIndex(item => item.Id == note.Id);
+        }
+
+        var isLastChild = depth > 0 && siblingCount > 0 && siblingIndex == siblingCount - 1;
+        result.Add(new NotebookListItem(note, depth, childList.Count, isExpanded, isLastChild));
+
+        if (!isExpanded)
+            return;
+
+        foreach (var child in childList)
+            AppendNote(result, child, depth + 1, childrenLookup);
+    }
+
+    private void ExpandAncestors(IEnumerable<Note> notes, int noteId)
+    {
+        var noteLookup = notes.ToDictionary(note => note.Id);
+        if (!noteLookup.TryGetValue(noteId, out var current))
+            return;
+
+        while (current.ParentId.HasValue && noteLookup.TryGetValue(current.ParentId.Value, out var parent))
+        {
+            _collapsedNoteIds.Remove(parent.Id);
+            current = parent;
+        }
+    }
+
+    private static bool IsDescendantOf(int noteId, int ancestorId, IEnumerable<Note> notes)
+    {
+        var noteLookup = notes.ToDictionary(note => note.Id);
+        if (!noteLookup.TryGetValue(noteId, out var current))
+            return false;
+
+        while (current.ParentId.HasValue && noteLookup.TryGetValue(current.ParentId.Value, out var parent))
+        {
+            if (parent.Id == ancestorId)
+                return true;
+
+            current = parent;
+        }
+
+        return false;
     }
 }

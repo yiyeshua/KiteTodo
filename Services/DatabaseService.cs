@@ -67,6 +67,8 @@ public class DatabaseService
         Todos.EnsureIndex(x => x.CompletedAt);
         Todos.EnsureIndex(x => x.Category);
         Pomodoros.EnsureIndex(x => x.StartTime);
+        Notes.EnsureIndex(x => x.ParentId);
+        Notes.EnsureIndex(x => x.UpdatedAt);
         Backlogs.EnsureIndex(x => x.Status);
         Flowcharts.EnsureIndex(x => x.Name);
         Flowcharts.EnsureIndex(x => x.UpdatedAt);

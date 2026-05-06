@@ -21,7 +21,9 @@ public class NoteService
     public List<Note> GetAll()
     {
         return _db.Notes.FindAll()
-            .OrderByDescending(x => x.UpdatedAt)
+            .OrderBy(x => x.ParentId ?? 0)
+            .ThenBy(x => x.SortOrder)
+            .ThenByDescending(x => x.UpdatedAt)
             .ToList();
     }
 
@@ -34,8 +36,27 @@ public class NoteService
     /// <summary>添加新笔记，自动设置创建和修改时间</summary>
     public Note Add(Note note)
     {
+        note.ParentId = null;
+        note.SortOrder = GetNextSortOrder(null);
         note.CreatedAt = DateTime.Now;
         note.UpdatedAt = DateTime.Now;
+        _db.Notes.Insert(note);
+        return note;
+    }
+
+    public Note AddChild(int parentId, string title = "新子笔记")
+    {
+        var note = new Note
+        {
+            ParentId = parentId,
+            SortOrder = GetNextSortOrder(parentId),
+            Title = title,
+            Content = string.Empty,
+            RichContent = null,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
+        };
+
         _db.Notes.Insert(note);
         return note;
     }
@@ -50,7 +71,37 @@ public class NoteService
     /// <summary>根据 ID 删除笔记</summary>
     public void Delete(int id)
     {
+        Delete(id, deleteChildren: true);
+    }
+
+    public void Delete(int id, bool deleteChildren)
+    {
+        var childNotes = GetChildren(id);
+
+        if (deleteChildren)
+        {
+            foreach (var child in childNotes)
+                Delete(child.Id, deleteChildren: true);
+        }
+        else
+        {
+            foreach (var child in childNotes)
+            {
+                child.ParentId = null;
+                child.UpdatedAt = DateTime.Now;
+                _db.Notes.Update(child);
+            }
+        }
+
         _db.Notes.Delete(id);
+    }
+
+    public List<Note> GetChildren(int parentId)
+    {
+        return _db.Notes.Find(x => x.ParentId == parentId)
+            .OrderBy(x => x.SortOrder)
+            .ThenByDescending(x => x.UpdatedAt)
+            .ToList();
     }
 
     /// <summary>
@@ -102,5 +153,14 @@ public class NoteService
                 || (!string.IsNullOrWhiteSpace(x.Content) && x.Content.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
             .OrderByDescending(x => x.UpdatedAt)
             .ToList();
+    }
+
+    private int GetNextSortOrder(int? parentId)
+    {
+        var siblings = _db.Notes.Find(x => x.ParentId == parentId).ToList();
+        if (siblings.Count == 0)
+            return 0;
+
+        return siblings.Max(x => x.SortOrder) + 1;
     }
 }

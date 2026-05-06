@@ -24,7 +24,9 @@ namespace KiteTodo.Views.Pages;
 public partial class NotebookPage : Page
 {
     private static NotebookPage? _activeInstance;
+    private static readonly TimeSpan AutoSaveDelay = TimeSpan.FromSeconds(15);
     private readonly NotebookViewModel _vm = new();
+    private readonly DispatcherTimer _autoSaveTimer;
     private const double MinEditorFontSize = 12;
     private const double MaxEditorFontSize = 24;
     private const double EditorFontStep = 1;
@@ -49,6 +51,11 @@ public partial class NotebookPage : Page
     {
         InitializeComponent();
         DataContext = _vm;
+        _autoSaveTimer = new DispatcherTimer
+        {
+            Interval = AutoSaveDelay
+        };
+        _autoSaveTimer.Tick += OnAutoSaveTimerTick;
         _vm.PropertyChanged += OnViewModelPropertyChanged;
         Loaded += (_, _) =>
         {
@@ -65,6 +72,8 @@ public partial class NotebookPage : Page
         };
         Unloaded += (_, _) =>
         {
+            FlushPendingAutoSave();
+
             if (NavigationService != null)
                 NavigationService.Navigating -= OnNavigationServiceNavigating;
 
@@ -78,27 +87,59 @@ public partial class NotebookPage : Page
     /// <summary>点击保存按钮时保存当前笔记</summary>
     private void OnSaveNote(object sender, System.Windows.RoutedEventArgs e)
     {
-        SaveCurrentNotePreservingEditor();
+        SaveCurrentNotePreservingEditor(isAutoSave: false);
     }
 
     /// <summary>右键菜单 → 删除笔记</summary>
-    private void OnDeleteNote(object sender, RoutedEventArgs e)
+    private void OnDeleteNoteKeepChildren(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem mi && mi.DataContext is Note note)
-            _vm.DeleteNoteCommand.Execute(note);
+        var note = GetNoteFromSender(sender);
+        if (note == null)
+            return;
+
+        _vm.DeleteNote(note, deleteChildren: false);
+    }
+
+    private void OnDeleteNoteWithChildren(object sender, RoutedEventArgs e)
+    {
+        var note = GetNoteFromSender(sender);
+        if (note == null)
+            return;
+
+        _vm.DeleteNote(note, deleteChildren: true);
+    }
+
+    private void OnCreateChildNote(object sender, RoutedEventArgs e)
+    {
+        var note = GetNoteFromSender(sender);
+        if (note == null)
+            return;
+
+        _vm.CreateChildNote(note.Id);
+    }
+
+    private void OnToggleChildNotes(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not int noteId)
+            return;
+
+        _vm.ToggleChildren(noteId);
+        e.Handled = true;
     }
 
     /// <summary>右键菜单 → 转化为待办</summary>
     private void OnConvertToTodo(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem mi && mi.DataContext is Note note)
+        var note = GetNoteFromSender(sender);
+        if (note != null)
             _vm.ConvertToTodoCommand.Execute(note);
     }
 
     /// <summary>右键菜单 → 转入事项池</summary>
     private void OnConvertToBacklog(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem mi && mi.DataContext is Note note)
+        var note = GetNoteFromSender(sender);
+        if (note != null)
         {
             var choice = ShowBacklogTransferDialog(note);
 
@@ -109,6 +150,19 @@ public partial class NotebookPage : Page
             _vm.MoveNoteToBacklog(note, deleteAfterTransfer);
             AlertService.ShowCornerToast(deleteAfterTransfer ? "已移动到事项池" : "已复制到事项池");
         }
+    }
+
+    private static Note? GetNoteFromSender(object sender)
+    {
+        if (sender is not MenuItem menuItem)
+            return null;
+
+        return menuItem.DataContext switch
+        {
+            Note menuNote => menuNote,
+            NotebookListItem listItem => listItem.Note,
+            _ => null
+        };
     }
 
     private BacklogTransferDialog.TransferChoice ShowBacklogTransferDialog(Note note)
@@ -142,6 +196,8 @@ public partial class NotebookPage : Page
         if (NoteEditor is null)
             return;
 
+        StopAutoSaveTimer();
+
         _isLoadingEditorText = true;
         try
         {
@@ -160,6 +216,8 @@ public partial class NotebookPage : Page
         {
             _isLoadingEditorText = false;
         }
+
+        UpdateSaveStatus("已保存", Brushes.SeaGreen);
 
         QueueEditorVisualRefresh(true);
     }
@@ -219,12 +277,18 @@ public partial class NotebookPage : Page
         if (_isLoadingEditorText)
             return;
 
+        ScheduleAutoSave();
+
         var currentLineCount = Math.Max(1, NoteEditor.LineCount);
         QueueEditorVisualRefresh(currentLineCount != _lastRenderedLineCount);
     }
 
     private void OnNoteTitleTextChanged(object sender, TextChangedEventArgs e)
     {
+        if (_isLoadingEditorText)
+            return;
+
+        ScheduleAutoSave();
     }
 
     private void OnNoteEditorSelectionChanged(object sender, RoutedEventArgs e)
@@ -300,8 +364,41 @@ public partial class NotebookPage : Page
         if (_allowNavigationAfterConfirmation)
             return;
 
+        FlushPendingAutoSave();
+
         if (!TryConfirmPendingChanges("离开记事本页面前检测到有未保存内容，是否保存？"))
             e.Cancel = true;
+    }
+
+    private void OnAutoSaveTimerTick(object? sender, EventArgs e)
+    {
+        StopAutoSaveTimer();
+        SaveCurrentNotePreservingEditor(isAutoSave: true);
+    }
+
+    private void ScheduleAutoSave()
+    {
+        if (_isLoadingEditorText || !_currentEditorNoteId.HasValue)
+            return;
+
+        _autoSaveTimer.Stop();
+        _autoSaveTimer.Start();
+        UpdateSaveStatus("未保存", Brushes.DarkOrange);
+    }
+
+    private void FlushPendingAutoSave()
+    {
+        if (!_autoSaveTimer.IsEnabled)
+            return;
+
+        StopAutoSaveTimer();
+        SaveCurrentNotePreservingEditor(isAutoSave: true);
+    }
+
+    private void StopAutoSaveTimer()
+    {
+        if (_autoSaveTimer.IsEnabled)
+            _autoSaveTimer.Stop();
     }
 
     private bool TryConfirmPendingChanges(string message)
@@ -342,16 +439,21 @@ public partial class NotebookPage : Page
             || !string.Equals(_savedContentSnapshot, editorText, StringComparison.Ordinal);
     }
 
-    private void SaveCurrentNotePreservingEditor()
+    private void SaveCurrentNotePreservingEditor(bool isAutoSave = false)
     {
         if (!_currentEditorNoteId.HasValue)
             return;
+
+        StopAutoSaveTimer();
 
         var editorText = NoteEditor.Text ?? string.Empty;
         var titleText = NoteTitleEditor.Text ?? string.Empty;
 
         if (!HasUnsavedChanges())
+        {
+            UpdateSaveStatus("已保存", Brushes.SeaGreen);
             return;
+        }
 
         var caretIndex = NoteEditor.CaretIndex;
         var selectionLength = NoteEditor.SelectionLength;
@@ -364,10 +466,14 @@ public partial class NotebookPage : Page
         _vm.EditContent = editorText;
 
         if (!_vm.SaveNoteSnapshot(_currentEditorNoteId.Value, titleText, editorText))
+        {
+            UpdateSaveStatus("保存失败", Brushes.IndianRed);
             return;
+        }
 
         _savedTitleSnapshot = titleText;
         _savedContentSnapshot = editorText;
+        UpdateSaveStatus(isAutoSave ? $"已自动保存 {DateTime.Now:HH:mm}" : $"已保存 {DateTime.Now:HH:mm}", Brushes.SeaGreen);
 
         Dispatcher.BeginInvoke(() =>
         {
@@ -385,6 +491,15 @@ public partial class NotebookPage : Page
             _editorScrollViewer?.ScrollToHorizontalOffset(horizontalOffset);
             QueueEditorVisualRefresh(false);
         }, DispatcherPriority.Background);
+    }
+
+    private void UpdateSaveStatus(string text, Brush foreground)
+    {
+        if (SaveStatusTextBlock is null)
+            return;
+
+        SaveStatusTextBlock.Text = text;
+        SaveStatusTextBlock.Foreground = foreground;
     }
 
     private void RefreshLineNumbers()
