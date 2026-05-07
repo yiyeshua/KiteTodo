@@ -81,6 +81,15 @@ public partial class ToolCollectionPage : Page
             AccentBrush = CreateBrush("#EC4899"),
             ViewFactory = static () => new NavigationDirectoryToolView()
         });
+        _tools.Add(new ToolEntry
+        {
+            Key = "tool-6",
+            Badge = "6",
+            Title = "环境音",
+            Subtitle = "雨声、海浪、篝火等自然混音，助眠放松专注",
+            AccentBrush = CreateBrush("#10B981"),
+            ViewFactory = AmbientSoundToolView.GetSharedInstance
+        });
 
         ShowWorkbench();
     }
@@ -109,7 +118,15 @@ public partial class ToolCollectionPage : Page
         ToolHostHeader.Visibility = Visibility.Collapsed;
         ToolHostBorder.Visibility = Visibility.Collapsed;
         WorkbenchScrollViewer.Visibility = Visibility.Visible;
-        ToolHostContent.Content = null;
+
+        // 返回工作台时分离当前工具视图（单例工具不会被销毁）
+        if (ToolHostContent.Content is FrameworkElement currentView)
+        {
+            ToolHostContent.Content = null;
+            // 从逻辑树中移除，但单例引用保持其存活
+            if (currentView.Parent is ContentControl)
+                ((ContentControl)currentView.Parent).Content = null;
+        }
     }
 
     private void ShowTool(ToolEntry tool)
@@ -135,6 +152,10 @@ public partial class ToolCollectionPage : Page
                 return;
             }
         }
+
+        // 处理单例工具在页面切换后重新挂载的情况
+        if (view.Parent is ContentControl oldHost && oldHost != ToolHostContent)
+            oldHost.Content = null;
 
         ToolHostContent.Content = view;
     }
