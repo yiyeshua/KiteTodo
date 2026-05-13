@@ -5,7 +5,8 @@
     xmlns:controls="clr-namespace:KiteTodo.Controls"
       xmlns:converters="clr-namespace:KiteTodo.Converters"
       Title="记事本"
-      Language="zh-CN">
+      Language="zh-CN"
+      PreviewKeyDown="OnPagePreviewKeyDown">
 
     <Page.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>

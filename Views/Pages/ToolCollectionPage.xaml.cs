@@ -90,6 +90,15 @@ public partial class ToolCollectionPage : Page
             AccentBrush = CreateBrush("#10B981"),
             ViewFactory = AmbientSoundToolView.GetSharedInstance
         });
+        _tools.Add(new ToolEntry
+        {
+            Key = "tool-7",
+            Badge = "7",
+            Title = "手绘白板",
+            Subtitle = "手绘风格画布，头脑风暴、草图、架构草稿",
+            AccentBrush = CreateBrush("#F43F5E"),
+            ViewFactory = ExcalidrawToolView.GetSharedInstance
+        });
 
         ShowWorkbench();
     }

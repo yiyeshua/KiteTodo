@@ -1,0 +1,25 @@
+<UserControl x:Class="KiteTodo.Views.Tools.ExcalidrawToolView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             Language="zh-CN"
+             Loaded="OnLoaded">
+
+    <Grid>
+        <Border x:Name="LoadingOverlay"
+                Background="{DynamicResource CustomWindowBg}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="✏️"
+                           FontSize="48"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="白板加载中..."
+                           FontSize="16"
+                           Margin="0,12,0,0"
+                           HorizontalAlignment="Center"
+                           Foreground="{DynamicResource CustomFg}"/>
+            </StackPanel>
+        </Border>
+
+        <wv2:WebView2 x:Name="DrawBrowser" Visibility="Collapsed"/>
+    </Grid>
+</UserControl>

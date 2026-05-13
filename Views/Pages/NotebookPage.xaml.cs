@@ -84,6 +84,16 @@ public partial class NotebookPage : Page
         };
     }
 
+    /// <summary>Ctrl+S 快捷键保存</summary>
+    private void OnPagePreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.S && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+        {
+            e.Handled = true;
+            SaveCurrentNotePreservingEditor();
+        }
+    }
+
     /// <summary>点击保存按钮时保存当前笔记</summary>
     private void OnSaveNote(object sender, System.Windows.RoutedEventArgs e)
     {
