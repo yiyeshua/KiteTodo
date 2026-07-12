@@ -1,0 +1,42 @@
+<!-- ============================================================================
+  NotebookProPage.xaml - 笔记本 Pro（基于 WebView2 的 AINote 集成）
+  提供完整的 Markdown / 纯文本双模式编辑体验
+  
+  技术方案：WebView2 嵌入 AINote React 前端 + .NET 桥接服务
+  ============================================================================ -->
+<Page x:Class="KiteTodo.Views.Pages.NotebookProPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      Language="zh-CN"
+      Title="笔记本"
+      Loaded="OnPageLoaded"
+      Unloaded="OnPageUnloaded">
+
+    <Grid Background="{DynamicResource CustomContentBg}">
+        <!-- 加载遮罩 -->
+        <Border x:Name="LoadingOverlay"
+                Background="{DynamicResource CustomContentBg}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="📝"
+                           FontSize="48"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="笔记本加载中..."
+                           FontSize="16"
+                           Margin="0,12,0,0"
+                           HorizontalAlignment="Center"
+                           Foreground="{DynamicResource CustomFg}"/>
+                <TextBlock x:Name="LoadingHintText"
+                           Text="首次加载需要初始化 WebView2 组件"
+                           FontSize="12"
+                           Margin="0,8,0,0"
+                           HorizontalAlignment="Center"
+                           Foreground="{DynamicResource CustomFgSecondary}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- WebView2 宿主 -->
+        <wv2:WebView2 x:Name="NoteAppWebView" Visibility="Collapsed"/>
+    </Grid>
+</Page>

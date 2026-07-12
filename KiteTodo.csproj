@@ -68,6 +68,30 @@
     </Content>
   </ItemGroup>
 
+  <!-- 笔记本 Pro：AINote 前端（开发时 Content，发布时嵌入 ZIP） -->
+  <ItemGroup>
+    <Content Include="Resources\NoteApp\**\*">
+      <Link>NoteApp\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <EmbeddedNoteAppArchive>$(MSBuildProjectDirectory)\obj\embedded\$(Configuration)\noteapp-win-x64.zip</EmbeddedNoteAppArchive>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="$(EmbeddedNoteAppArchive)" LogicalName="KiteTodo.noteapp-win-x64.zip" />
+  </ItemGroup>
+
+  <Target Name="CreateEmbeddedNoteAppArchive"
+          BeforeTargets="CoreCompile"
+          Inputs="$(MSBuildProjectDirectory)\Resources\NoteApp\index.html"
+          Outputs="$(EmbeddedNoteAppArchive)">
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(EmbeddedNoteAppArchive)'))" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$src = '$(MSBuildProjectDirectory)\Resources\NoteApp\*'; $dst = '$(EmbeddedNoteAppArchive)'; if (Test-Path $dst) { Remove-Item $dst -Force }; Compress-Archive -Path $src -DestinationPath $dst -Force&quot;" />
+  </Target>
+
   <Target Name="CreateEmbeddedLibVlcArchive"
           BeforeTargets="CoreCompile"
           Inputs="$(VideoLanLibVlcWindowsPackagePath)\build\x64\libvlc.dll;$(VideoLanLibVlcWindowsPackagePath)\build\x64\libvlccore.dll"

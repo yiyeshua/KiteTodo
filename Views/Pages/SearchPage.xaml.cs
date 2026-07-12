@@ -76,8 +76,7 @@ public partial class SearchPage : Page
                 mainWindow.NavigateTo(typeof(BacklogPage));
                 break;
             case SearchTargetType.Note:
-                SearchNavigationRequest.PendingNoteId = result.Id;
-                mainWindow.NavigateTo(typeof(NotebookPage));
+                mainWindow.NavigateTo(typeof(NotebookProPage));
                 break;
         }
     }

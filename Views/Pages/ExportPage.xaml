@@ -60,6 +60,24 @@
                 </StackPanel>
                 <TextBlock Text="{Binding BackupStatusMessage}" FontSize="12"
                            Foreground="#0078D4" TextWrapping="Wrap"/>
+
+                <!-- 笔记本 Pro 备份 -->
+                <Separator Margin="0,16,0,12"/>
+                <TextBlock Text="笔记本 Pro (新笔记本)" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <TextBlock Text="新版笔记本使用 .md/.txt 文件存储，独立于 LiteDB。"
+                           FontSize="12" Opacity="0.6" Margin="0,0,0,12"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <ui:Button Content="备份笔记文件" Appearance="Primary"
+                               Click="OnBackupNotesPro" Margin="0,0,12,0"/>
+                    <ui:Button Content="恢复笔记文件" Appearance="Secondary"
+                               Click="OnRestoreNotesPro" Margin="0,0,12,0"/>
+                    <ui:Button Content="迁移旧笔记→新笔记本" Appearance="Secondary"
+                               Click="OnMigrateOldNotes" Margin="0,0,12,0"/>
+                    <ui:Button Content="打开笔记目录" Appearance="Secondary"
+                               Click="OnOpenNotesProFolder"/>
+                </StackPanel>
+                <TextBlock Text="{Binding NotesProStatusMessage}" FontSize="12"
+                           Foreground="#0078D4" TextWrapping="Wrap"/>
             </StackPanel>
         </ui:Card>
     </Grid>

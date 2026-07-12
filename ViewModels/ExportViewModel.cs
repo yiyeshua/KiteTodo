@@ -39,6 +39,10 @@ public partial class ExportViewModel : ObservableObject
     [ObservableProperty]
     private string _backupStatusMessage = string.Empty;
 
+    /// <summary>笔记本 Pro 备份状态</summary>
+    [ObservableProperty]
+    private string _notesProStatusMessage = string.Empty;
+
     /// <summary>生成预览（不保存文件，只更新预览文本）</summary>
     [RelayCommand]
     private void GeneratePreview()
@@ -102,5 +106,84 @@ public partial class ExportViewModel : ObservableObject
         var json = await File.ReadAllTextAsync(dialog.FileName, System.Text.Encoding.UTF8);
         var (success, message) = _backupService.ImportFromJson(json);
         BackupStatusMessage = message;
+    }
+
+    /// <summary>备份笔记本 Pro 数据（复制 notes 目录）</summary>
+    [RelayCommand]
+    private async Task BackupNotesPro()
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            FileName = $"KiteTodo_NotesPro_{DateTime.Now:yyyyMMdd_HHmmss}",
+            Filter = "All files (*.*)|*.*",
+            DefaultExt = ""
+        };
+        if (dialog.ShowDialog() != true) return;
+
+        // 使用选中的目录作为备份目标
+        var destDir = Path.GetDirectoryName(dialog.FileName)!;
+        await Task.Run(() =>
+        {
+            var (success, message) = _backupService.BackupNotesDirectory(destDir);
+            NotesProStatusMessage = message;
+        });
+    }
+
+    /// <summary>恢复笔记本 Pro 数据</summary>
+    [RelayCommand]
+    private async Task RestoreNotesPro()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "选择笔记本 Pro 备份目录",
+            Filter = "All files (*.*)|*.*",
+            CheckFileExists = false,
+            CheckPathExists = true
+        };
+        if (dialog.ShowDialog() != true) return;
+
+        // 获取选中的目录路径
+        var srcDir = Path.GetDirectoryName(dialog.FileName)!;
+        var result = System.Windows.MessageBox.Show(
+            $"将从以下目录恢复笔记本 Pro 数据：\n{srcDir}\n\n当前数据将被覆盖，确认继续？",
+            "确认恢复", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+
+        if (result == System.Windows.MessageBoxResult.Yes)
+        {
+            await Task.Run(() =>
+            {
+                var (success, message) = _backupService.RestoreNotesDirectory(srcDir);
+                NotesProStatusMessage = message;
+            });
+        }
+    }
+
+    /// <summary>将旧笔记本数据（LiteDB）迁移到笔记本 Pro（.md 文件）</summary>
+    [RelayCommand]
+    private void MigrateOldNotes()
+    {
+        var result = System.Windows.MessageBox.Show(
+            "将旧笔记本中的所有笔记转换为 .md 文件，保存到笔记本 Pro 目录。\n\n原 LiteDB 数据不会被删除，确认继续？",
+            "迁移旧笔记", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+
+        if (result == System.Windows.MessageBoxResult.Yes)
+        {
+            var (success, skipped, message) = _backupService.MigrateOldNotesToFileSystem();
+            NotesProStatusMessage = message;
+        }
+    }
+
+    /// <summary>打开笔记本 Pro 数据目录</summary>
+    [RelayCommand]
+    private void OpenNotesProFolder()
+    {
+        var path = BackupService.GetNotesProPath();
+        if (!Directory.Exists(path))
+            Directory.CreateDirectory(path);
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = path,
+            UseShellExecute = true
+        });
     }
 }

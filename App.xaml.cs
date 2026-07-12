@@ -380,7 +380,7 @@ public partial class App : Application
 
     private void ExitApp()
     {
-        if (!NotebookPage.ConfirmPendingChangesForActivePage())
+        if (!NotebookProPage.ConfirmPendingChangesForActivePage())
             return;
 
         ReminderService.Instance.Stop();

@@ -56,4 +56,20 @@ public partial class ExportPage : Page
         if (result == MessageBoxResult.Yes)
             await _vm.RestoreFromFileCommand.ExecuteAsync(null);
     }
+
+    /// <summary>备份笔记本 Pro 文件</summary>
+    private async void OnBackupNotesPro(object sender, RoutedEventArgs e)
+        => await _vm.BackupNotesProCommand.ExecuteAsync(null);
+
+    /// <summary>恢复笔记本 Pro 文件</summary>
+    private async void OnRestoreNotesPro(object sender, RoutedEventArgs e)
+        => await _vm.RestoreNotesProCommand.ExecuteAsync(null);
+
+    /// <summary>迁移旧笔记到新笔记本</summary>
+    private void OnMigrateOldNotes(object sender, RoutedEventArgs e)
+        => _vm.MigrateOldNotesCommand.Execute(null);
+
+    /// <summary>打开笔记本 Pro 目录</summary>
+    private void OnOpenNotesProFolder(object sender, RoutedEventArgs e)
+        => _vm.OpenNotesProFolderCommand.Execute(null);
 }

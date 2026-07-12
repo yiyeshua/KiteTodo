@@ -1,0 +1,1 @@
+import{i as e,u as o}from"./index-Dps2Z6Qf.js";async function i(r,s){const n=o.getState().config.storageDir;return e("save_version",{notePath:r,content:s,workDir:n})}async function a(r){return e("list_versions",{noteId:r})}async function c(r){return e("restore_version",{versionId:r})}export{a as listVersions,c as restoreVersion,i as saveVersion};

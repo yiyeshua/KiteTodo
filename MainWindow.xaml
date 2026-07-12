@@ -49,11 +49,6 @@
                         <ui:SymbolIcon Symbol="Search24"/>
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="MD阅读" TargetPageType="{x:Type pages:MarkdownReaderPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="BookOpen24"/>
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="流程设计" TargetPageType="{x:Type pages:DiagramDesignerPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="ArrowBidirectionalLeftRight24"/>
@@ -64,9 +59,9 @@
                         <ui:SymbolIcon Symbol="TaskListAdd24"/>
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="记事本" TargetPageType="{x:Type pages:NotebookPage}">
+                <ui:NavigationViewItem Content="笔记本" TargetPageType="{x:Type pages:NotebookProPage}">
                     <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="NoteEdit24"/>
+                        <ui:SymbolIcon Symbol="Notepad24"/>
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="数据导出" TargetPageType="{x:Type pages:ExportPage}">
