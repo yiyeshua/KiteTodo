@@ -85,9 +85,7 @@
   </ItemGroup>
 
   <Target Name="CreateEmbeddedNoteAppArchive"
-          BeforeTargets="CoreCompile"
-          Inputs="$(MSBuildProjectDirectory)\Resources\NoteApp\index.html"
-          Outputs="$(EmbeddedNoteAppArchive)">
+          BeforeTargets="CoreCompile">
     <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(EmbeddedNoteAppArchive)'))" />
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$src = '$(MSBuildProjectDirectory)\Resources\NoteApp\*'; $dst = '$(EmbeddedNoteAppArchive)'; if (Test-Path $dst) { Remove-Item $dst -Force }; Compress-Archive -Path $src -DestinationPath $dst -Force&quot;" />
   </Target>

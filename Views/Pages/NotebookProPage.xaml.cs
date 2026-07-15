@@ -174,14 +174,15 @@ public partial class NotebookProPage : Page
                 return devPath;
         }
 
-        // 2. 发布版本：从嵌入 ZIP 解压
+        // 2. 发布版本：从嵌入 ZIP 解压（每次强制从最新 ZIP 提取）
         var cacheDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "KiteTodo", "NoteAppCache");
         var indexFile = Path.Combine(cacheDir, "index.html");
 
-        if (File.Exists(indexFile))
-            return cacheDir;
+        // 始终清空旧缓存并重新解压，确保与嵌入 ZIP 一致
+        if (Directory.Exists(cacheDir))
+            Directory.Delete(cacheDir, true);
 
         // 提取嵌入 ZIP
         var assembly = typeof(NotebookProPage).Assembly;

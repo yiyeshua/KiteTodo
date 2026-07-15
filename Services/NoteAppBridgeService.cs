@@ -61,6 +61,10 @@ public class NoteAppBridgeService
 
             var id = root.GetProperty("id").GetInt32();
             var cmd = root.GetProperty("cmd").GetString() ?? "";
+
+            // 记录所有收到的命令
+            File.AppendAllText(Path.Combine(_workDir, ".ai-debug.log"),
+                $"[{DateTime.Now:HH:mm:ss}] IPC: cmd={cmd}\n", Encoding.UTF8);
             var args = root.TryGetProperty("args", out var argsEl) ? argsEl : default;
 
             // 执行命令并获取原始返回值
@@ -117,6 +121,14 @@ public class NoteAppBridgeService
                 "is_absolute" => PathIsAbsolute(args),
                 "resolve_directory" => ResolveDirectory(args),
                 _ => throw new InvalidOperationException($"Unknown path method: {method}")
+            },
+            "window" => method switch
+            {
+                "is_fullscreen" => false,
+                "set_fullscreen" => null,
+                "is_always_on_top" => false,
+                "set_always_on_top" => null,
+                _ => null
             },
             "event" => method switch
             {
@@ -334,6 +346,9 @@ public class NoteAppBridgeService
             case "rename_note": return RenameNote(args);
             case "move_note": return MoveNote(args);
             case "export_note": return await ExportNoteAsync(args);
+            case "update_note_mode": return UpdateNoteMode(args);
+            case "import_file": return await ImportFileAsync(args);
+            case "backup_workspace": return await BackupWorkspaceAsync(args);
 
             // ---- 目录树 ----
             case "scan_tree": return await ScanTreeAsync(args);
@@ -390,7 +405,8 @@ public class NoteAppBridgeService
 
             // ---- 文件监听 ----
             case "start_watcher": return null;
-            case "check_file_changes": return new List<object>(); // 返回空列表表示无变更
+            case "check_file_changes": return new List<object>();
+            case "list_templates": return await ListTemplatesAsync(args); // 返回空列表表示无变更
 
             default:
                 throw new InvalidOperationException($"Unknown command: {cmd}");
@@ -445,6 +461,8 @@ public class NoteAppBridgeService
             while (File.Exists(fullPath));
         }
         File.WriteAllText(fullPath, "", Encoding.UTF8);
+        File.AppendAllText(Path.Combine(_workDir, ".ai-debug.log"),
+            $"[{DateTime.Now:HH:mm:ss}] create_note: {fileName} -> {fullPath}\n", Encoding.UTF8);
         return Path.GetRelativePath(_workDir, fullPath).Replace('\\', '/');
     }
 
@@ -506,6 +524,53 @@ public class NoteAppBridgeService
         return dest;
     }
 
+    /// <summary>更新笔记编辑模式（md ↔ txt），重命名文件扩展名</summary>
+    private object? UpdateNoteMode(JsonElement args)
+    {
+        var path = GetArg(args, "path");
+        var mode = GetArg(args, "mode");
+        var fullPath = ResolvePath(path);
+        if (!File.Exists(fullPath)) return null;
+
+        var newExt = mode == "txt" ? ".txt" : ".md";
+        if (Path.GetExtension(fullPath).ToLower() == newExt)
+            return Path.GetRelativePath(_workDir, fullPath).Replace('\\', '/');
+
+        var newPath = Path.ChangeExtension(fullPath, newExt);
+        File.Move(fullPath, newPath);
+        return Path.GetRelativePath(_workDir, newPath).Replace('\\', '/');
+    }
+
+    /// <summary>导入外部文件到工作目录</summary>
+    private async Task<string> ImportFileAsync(JsonElement args)
+    {
+        var sourcePath = GetArg(args, "sourcePath");
+        var destDir = GetArg(args, "destDir");
+        var workDir = GetArg(args, "workDir");
+        var baseDir = !string.IsNullOrEmpty(workDir) ? Path.GetFullPath(workDir) : _workDir;
+        var destFolder = string.IsNullOrEmpty(destDir) ? baseDir : Path.GetFullPath(Path.Combine(baseDir, destDir));
+        if (!File.Exists(sourcePath)) throw new FileNotFoundException($"源文件不存在: {sourcePath}");
+
+        var fileName = Path.GetFileName(sourcePath);
+        var destPath = Path.Combine(destFolder, fileName);
+        Directory.CreateDirectory(destFolder);
+        File.Copy(sourcePath, destPath, true);
+        await Task.CompletedTask;
+        return Path.GetRelativePath(baseDir, destPath).Replace('\\', '/');
+    }
+
+    /// <summary>备份整个工作目录到 ZIP 文件</summary>
+    private async Task<string> BackupWorkspaceAsync(JsonElement args)
+    {
+        var wd = GetArg(args, "workDir");
+        var dir = !string.IsNullOrEmpty(wd) ? Path.GetFullPath(wd) : _workDir;
+        var backupFile = Path.Combine(Path.GetDirectoryName(dir)!, $"KiteTodo_NotesPro_Backup_{DateTime.Now:yyyyMMdd_HHmmss}.zip");
+        if (File.Exists(backupFile)) File.Delete(backupFile);
+        System.IO.Compression.ZipFile.CreateFromDirectory(dir, backupFile);
+        await Task.CompletedTask;
+        return backupFile;
+    }
+
     // ========================================================================
     // 目录扫描
     // ========================================================================
@@ -520,7 +585,7 @@ public class NoteAppBridgeService
         foreach (var dir in Directory.GetDirectories(dirPath))
         {
             var name = Path.GetFileName(dir);
-            if (name.StartsWith(".") || name == "assets") continue;
+            if (name.StartsWith(".") || name.StartsWith("_") || name == "assets") continue;
             entries.Add(new Dictionary<string, object>
             {
                 ["name"] = name,
@@ -581,7 +646,7 @@ public class NoteAppBridgeService
         foreach (var dir in Directory.GetDirectories(fullPath))
         {
             var dirName = Path.GetFileName(dir);
-            if (dirName.StartsWith(".") || dirName == "assets") continue;
+            if (dirName.StartsWith(".") || dirName.StartsWith("_") || dirName == "assets") continue;
             children.Add(BuildTreeNode(dir, rootPath));
         }
         foreach (var file in Directory.GetFiles(fullPath))
@@ -636,11 +701,13 @@ public class NoteAppBridgeService
         var fullPath = Path.Combine(targetDir, name);
         if (Directory.Exists(fullPath))
         {
-            var counter = 1;
-            do { fullPath = Path.Combine(targetDir, $"{name}_{counter}"); counter++; }
-            while (Directory.Exists(fullPath));
+            File.AppendAllText(Path.Combine(_workDir, ".ai-debug.log"),
+                $"[{DateTime.Now:HH:mm:ss}] create_folder: already exists {fullPath}\n", Encoding.UTF8);
+            return Path.GetRelativePath(baseDir, fullPath).Replace('\\', '/');
         }
         Directory.CreateDirectory(fullPath);
+        File.AppendAllText(Path.Combine(_workDir, ".ai-debug.log"),
+            $"[{DateTime.Now:HH:mm:ss}] create_folder: created {fullPath}\n", Encoding.UTF8);
         return Path.GetRelativePath(baseDir, fullPath).Replace('\\', '/');
     }
 
@@ -664,6 +731,60 @@ public class NoteAppBridgeService
         var newPath = Path.Combine(parentDir, newName);
         if (Directory.Exists(fullPath)) Directory.Move(fullPath, newPath);
         return Path.GetRelativePath(baseDir, newPath).Replace('\\', '/');
+    }
+
+    /// <summary>
+    /// 列出 _templates 目录下的所有模板文件（名称和内容）。
+    /// </summary>
+    private static readonly (string Name, string Content)[] DefaultTemplates = new (string, string)[]
+    {
+        ("每日周报", "# {{title}}\n\n**日期**: {{date}}\n\n---\n\n## 本周完成\n- \n\n## 下周计划\n- \n\n## 遇到的问题\n- \n\n## 备注\n- \n"),
+        ("会议纪要", "# {{title}}\n\n**日期**: {{date}}\n**参会**: \n\n---\n\n## 议题\n1. \n\n## 讨论\n- \n\n## 决议\n- [ ] \n\n## 待办\n- [ ] 负责人:  截止: \n"),
+        ("代码笔记", "# {{title}}\n\n> {{date}}\n\n## 概述\n\n## 核心概念\n\n```python\n\n```\n\n## 注意事项\n- \n"),
+        ("Bug报告", "# Bug: {{title}}\n\n**日期**: {{date}}\n**状态**: 未修复\n\n## 复现步骤\n1. \n2. \n\n## 预期\n\n## 实际\n\n## 环境\n- \n"),
+        ("读书笔记", "# {{title}}\n\n**日期**: {{date}}\n**评分**: \n\n## 一句话总结\n\n## 核心观点\n1. \n2. \n\n## 精彩摘录\n> \n\n## 行动清单\n- [ ] \n"),
+        ("OKR目标", "# {{title}}\n\n**周期**: {{month}}月\n\n## 目标\n> \n\n## 关键结果\n- [ ] KR1: \n- [ ] KR2: \n- [ ] KR3: \n\n## 周进度\n| W1 | W2 | W3 | W4 |\n|----|----|----|----|\n| | | | |\n"),
+    };
+
+    private async Task<List<object>> ListTemplatesAsync(JsonElement args)
+    {
+        var result = new List<object>();
+        try
+        {
+            var workDir = GetArg(args, "workDir");
+            var dir = !string.IsNullOrEmpty(workDir) ? Path.GetFullPath(workDir) : _workDir;
+            var templatesDir = Path.Combine(dir, "_templates");
+
+            // 自动创建目录和内置模板
+            if (!Directory.Exists(templatesDir))
+                Directory.CreateDirectory(templatesDir);
+
+            var existingFiles = Directory.GetFiles(templatesDir, "*.md");
+            if (existingFiles.Length == 0)
+            {
+                foreach (var t in DefaultTemplates)
+                {
+                    var filePath = Path.Combine(templatesDir, t.Name + ".md");
+                    await File.WriteAllTextAsync(filePath, t.Content, Encoding.UTF8);
+                }
+            }
+
+            // 读取模板
+            foreach (var file in Directory.GetFiles(templatesDir, "*.md"))
+            {
+                result.Add(new Dictionary<string, object>
+                {
+                    ["name"] = Path.GetFileNameWithoutExtension(file),
+                    ["content"] = await File.ReadAllTextAsync(file, Encoding.UTF8)
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            File.AppendAllText(Path.Combine(_workDir, ".ai-debug.log"),
+                $"[{DateTime.Now:HH:mm:ss}] list_templates ERROR: {ex.Message}\n", Encoding.UTF8);
+        }
+        return result;
     }
 
     // ========================================================================

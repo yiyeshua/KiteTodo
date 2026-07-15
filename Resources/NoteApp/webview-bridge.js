@@ -88,6 +88,12 @@
     delimiter: ':'
   };
 
+  // Window metadata (required by @tauri-apps/api/window)
+  window.__TAURI_INTERNALS__.metadata = {
+    currentWindow: { label: 'main' },
+    windows: [{ label: 'main' }]
+  };
+
   // --------------------------------------------------------------------------
   // Shim other Tauri APIs that use __TAURI_INTERNALS__
   // --------------------------------------------------------------------------
