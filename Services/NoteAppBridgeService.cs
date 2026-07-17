@@ -372,7 +372,8 @@ public class NoteAppBridgeService
             // ---- 搜索 ----
             case "search_notes": return await SearchNotesAsync(args);
             case "search_files_direct": return await SearchFilesDirectAsync(args);
-            case "rebuild_search_index": return 0; // no-op, return 0
+            case "rebuild_search_index": return RebuildSearchIndex(args);
+            case "update_single_search_index": return 0; // no-op, return 0
             case "health_check": return new Dictionary<string, object>
             {
                 ["orphanImages"] = new List<string>(),
@@ -745,6 +746,27 @@ public class NoteAppBridgeService
         ("读书笔记", "# {{title}}\n\n**日期**: {{date}}\n**评分**: \n\n## 一句话总结\n\n## 核心观点\n1. \n2. \n\n## 精彩摘录\n> \n\n## 行动清单\n- [ ] \n"),
         ("OKR目标", "# {{title}}\n\n**周期**: {{month}}月\n\n## 目标\n> \n\n## 关键结果\n- [ ] KR1: \n- [ ] KR2: \n- [ ] KR3: \n\n## 周进度\n| W1 | W2 | W3 | W4 |\n|----|----|----|----|\n| | | | |\n"),
     };
+
+    /// <summary>
+    /// 重建搜索索引：扫描工作目录下所有 .md/.txt 文件并返回数量。
+    /// </summary>
+    private static int RebuildSearchIndex(JsonElement args)
+    {
+        var workDir = GetArgStatic(args, "workDir");
+        if (string.IsNullOrEmpty(workDir))
+            workDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "KiteTodo", "notes");
+        var dir = Path.GetFullPath(workDir);
+        if (!Directory.Exists(dir)) return 0;
+        return Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories)
+            .Count(f => f.EndsWith(".md", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".txt", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string GetArgStatic(JsonElement args, string key)
+    {
+        if (args.ValueKind == JsonValueKind.Object && args.TryGetProperty(key, out var val))
+            return val.ValueKind == JsonValueKind.String ? val.GetString() ?? "" : "";
+        return "";
+    }
 
     private async Task<List<object>> ListTemplatesAsync(JsonElement args)
     {

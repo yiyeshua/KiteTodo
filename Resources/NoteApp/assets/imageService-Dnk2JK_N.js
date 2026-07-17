@@ -1,0 +1,1 @@
+import{i as a}from"./index-CY9spMkh.js";async function m(e,n,t=!0,r=80){return a("save_image",{imgData:e,noteDir:n,compress:t,quality:r})}async function o(e){return a("delete_image",{path:e})}export{o as deleteImage,m as saveImage};
